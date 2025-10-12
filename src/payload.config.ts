@@ -29,7 +29,7 @@ export default buildConfig({
         alt: 'Fullstack Factory CMS',
       },
       favicon: '/favicon.svg',
-      footer: 'Fullstack Factory CMS',
+      footer: 'Fullstack Factory Automations',
       login: {
         background: '/login-background.jpg',
         logo: {
