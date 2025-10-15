@@ -1,18 +1,842 @@
 ---
 title: 'Build Full Payload Project'
-description: 'Führt alle Schritte nacheinander aus und leert nach jedem Command automatisch den Context.'
+description: 'Orchestriert den kompletten Projekt-Setup mit automatischem Context-Management, Fehlerbehandlung und Progress-Tracking'
+globs:
+  - "**/*"
+alwaysRun: false
 ---
 
-1. Führe `setup-project-workflow` aus.
-2. Führe `generate-secrets` aus
-3. Führe `style-buttons` aus.
-4. Führe `clear-context` aus.
+# Vollständiger Payload-Projekt-Aufbau
 
-5. Führe `build-navbar` aus.
-6. Führe `clear-context` aus.
+## 🎯 Ziel
+Führt alle Setup-Schritte nacheinander aus mit automatischem Context-Management, Validierung zwischen Schritten und detailliertem Progress-Tracking.
 
-7. Führe `build-heroes` aus.
-8. Führe `clear-context` aus.
+---
 
-9. Bestätige erfolgreichen Gesamtaufbau:
-   > ✅ Projekt vollständig aufgebaut. Alle Teilcommands erfolgreich ausgeführt, Context nach jedem Schritt geleert.
+## 📋 PRE-FLIGHT CHECKS
+
+Vor dem Start prüfe:
+
+### 1. Abhängigkeiten
+- [ ] Node.js 18+ installiert: `node --version`
+- [ ] Git installiert: `git --version`
+- [ ] Vercel CLI installiert: `vercel --version`
+- [ ] Figma MCP Server konfiguriert
+
+### 2. Zugänge
+- [ ] GitHub Account eingeloggt: `gh auth status`
+- [ ] Vercel Account eingeloggt: `vercel whoami`
+- [ ] Figma Access Token in .env.local
+- [ ] Neon Account verfügbar
+
+### 3. Umgebung
+- [ ] Genug Speicherplatz (min. 2GB frei)
+- [ ] Stabile Internetverbindung
+- [ ] Keine laufenden Dev-Server
+
+**Falls etwas fehlt:**
+- ❌ STOPPE den Workflow
+- 📋 Liste fehlende Abhängigkeiten auf
+- 📖 Gebe Setup-Anleitung
+
+---
+
+## 🔄 WORKFLOW SCHRITTE
+
+### PHASE 1: Projekt-Initialisierung
+**Geschätzter Zeitbedarf: 5-10 Minuten**
+
+#### Schritt 1.1: Repository Setup
+```bash
+# Führe aus: setup-project-workflow
+> Repository wird geklont
+> Secrets werden generiert
+> Vercel Blob Storage wird erstellt
+> Neon Database wird erstellt
+> .env.local wird konfiguriert
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Repository geklont nach: c:\Users\se18218\elisa-frontend
+✅ PAYLOAD_SECRET generiert: [32 Zeichen]
+✅ Vercel Blob erstellt: elisa-frontend-storage
+✅ Neon DB erstellt: elisa-frontend-db
+✅ .env.local aktualisiert mit allen Credentials
+```
+
+**Validierung nach Schritt 1.1:**
+- [ ] Repository existiert in lokalem Ordner
+- [ ] .env.local enthält alle benötigten Variablen:
+  - `PAYLOAD_SECRET`
+  - `DATABASE_URI`
+  - `BLOB_READ_WRITE_TOKEN`
+  - `DATABASE_URL`
+  - `NEXT_PUBLIC_SERVER_URL`
+  - `FIGMA_FILE_KEY`
+  - `FIGMA_ACCESS_TOKEN`
+- [ ] package.json existiert
+- [ ] node_modules Ordner wurde erstellt
+
+**Bei Fehler:**
+```typescript
+if (error.includes('Repository nicht erreichbar')) {
+  console.error('❌ GitHub Repository nicht verfügbar');
+  console.log('Prüfe:');
+  console.log('1. GitHub Authentifizierung: gh auth status');
+  console.log('2. Repository URL korrekt');
+  console.log('3. Internetverbindung stabil');
+  return { success: false, step: '1.1', error };
+}
+
+if (error.includes('Vercel Blob')) {
+  console.error('❌ Vercel Blob konnte nicht erstellt werden');
+  console.log('Manuelle Erstellung: https://vercel.com/dashboard/storage');
+  return { success: false, step: '1.1', error };
+}
+
+if (error.includes('Neon DB')) {
+  console.error('❌ Neon Database konnte nicht erstellt werden');
+  console.log('Manuelle Erstellung: https://console.neon.tech/');
+  return { success: false, step: '1.1', error };
+}
+```
+
+**Context-Management:**
+```typescript
+// Nach erfolgreichem Abschluss von Schritt 1.1
+await clearContext({
+  keepFiles: ['.env.local', 'package.json'],
+  reason: 'Phase 1 abgeschlossen, Credentials gesichert'
+});
+
+console.log('🧹 Context geleert - Phase 1 abgeschlossen');
+console.log('📊 Progress: 20% (1/5 Phasen)');
+```
+
+---
+
+### PHASE 2: Design-System Setup
+**Geschätzter Zeitbedarf: 3-5 Minuten**
+
+#### Schritt 2.1: Tailwind Optimierung
+```bash
+# Führe aus: optimize-tailwind
+> Figma Design-Tokens werden extrahiert
+> tailwind.config.mjs wird generiert
+> globals.css wird generiert
+> Design-Dokumentation wird erstellt
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Figma Design-Tokens extrahiert:
+   - 45 Farben
+   - 12 Typography-Rules
+   - 32 Spacing-Werte
+   - 8 Border-Radius-Werte
+   - 6 Shadow-Definitionen
+✅ tailwind.config.mjs erstellt
+✅ src/app/globals.css erstellt
+✅ FIGMA_DESIGN_TOKENS.md dokumentiert
+✅ Backups erstellt
+```
+
+**Validierung nach Schritt 2.1:**
+- [ ] tailwind.config.mjs existiert und ist valid
+- [ ] src/app/globals.css existiert
+- [ ] Keine CSS-Syntax-Fehler
+- [ ] Design-Tokens korrekt importiert
+- [ ] Backup-Dateien existieren (.backup.timestamp)
+
+**Test:**
+```typescript
+// Prüfe ob Tailwind Config valid ist
+try {
+  const config = await import('./tailwind.config.mjs');
+  if (!config.default || !config.default.theme) {
+    throw new Error('Tailwind Config unvollständig');
+  }
+  
+  // Prüfe kritische Design-Tokens
+  const colors = config.default.theme.extend.colors;
+  if (!colors.primary || !colors.background) {
+    throw new Error('Kritische Farben fehlen');
+  }
+  
+  console.log('✅ Tailwind Config validiert');
+} catch (error) {
+  console.error('❌ Tailwind Config fehlerhaft:', error);
+  
+  // Restore Backup
+  const backups = fs.readdirSync('.').filter(f => f.includes('tailwind.config.mjs.backup'));
+  if (backups.length > 0) {
+    const latest = backups.sort().pop();
+    fs.copyFileSync(latest, 'tailwind.config.mjs');
+    console.log(`🔄 Backup wiederhergestellt: ${latest}`);
+  }
+  
+  return { success: false, step: '2.1', error };
+}
+```
+
+**Context-Management:**
+```typescript
+await clearContext({
+  keepFiles: [
+    '.env.local',
+    'tailwind.config.mjs',
+    'src/app/globals.css',
+    'FIGMA_DESIGN_TOKENS.md'
+  ],
+  reason: 'Design-System konfiguriert'
+});
+
+console.log('🧹 Context geleert - Phase 2 abgeschlossen');
+console.log('📊 Progress: 40% (2/5 Phasen)');
+```
+
+---
+
+### PHASE 3: Component Styling
+**Geschätzter Zeitbedarf: 2-3 Minuten**
+
+#### Schritt 3.1: Button-Komponenten stylen
+```bash
+# Führe aus: style-buttons
+> Button-Varianten werden aus Figma extrahiert
+> Button-Components werden erstellt
+> Storybook-Stories werden generiert
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Button-Varianten erstellt:
+   - Primary Button
+   - Secondary Button
+   - Outline Button
+   - Ghost Button
+   - Destructive Button
+   - Icon Button
+✅ src/components/ui/button.tsx erstellt
+✅ Button.stories.tsx erstellt
+✅ Tests erstellt
+```
+
+**Validierung nach Schritt 3.1:**
+- [ ] Button-Component existiert
+- [ ] Alle Varianten verfügbar (primary, secondary, outline, ghost, destructive)
+- [ ] TypeScript-Typen korrekt
+- [ ] Accessibility (ARIA-Labels, Focus-States)
+- [ ] Responsive auf allen Breakpoints
+
+**Test:**
+```typescript
+// Test Button-Component
+import { Button } from '@/components/ui/button';
+
+// Prüfe alle Varianten
+const variants = ['default', 'secondary', 'outline', 'ghost', 'destructive'];
+const sizes = ['sm', 'default', 'lg', 'icon'];
+
+for (const variant of variants) {
+  for (const size of sizes) {
+    try {
+      render(<Button variant={variant} size={size}>Test</Button>);
+      console.log(`✅ Button ${variant}-${size} funktioniert`);
+    } catch (error) {
+      console.error(`❌ Button ${variant}-${size} fehlerhaft:`, error);
+      return { success: false, step: '3.1', error };
+    }
+  }
+}
+
+console.log('✅ Alle Button-Varianten validiert');
+```
+
+**Context-Management:**
+```typescript
+await clearContext({
+  keepFiles: [
+    '.env.local',
+    'tailwind.config.mjs',
+    'src/app/globals.css',
+    'src/components/ui/button.tsx'
+  ],
+  reason: 'Button-Components fertig'
+});
+
+console.log('🧹 Context geleert - Phase 3 abgeschlossen');
+console.log('📊 Progress: 60% (3/5 Phasen)');
+```
+
+---
+
+### PHASE 4: Navigation Components
+**Geschätzter Zeitbedarf: 5-7 Minuten**
+
+#### Schritt 4.1: Navbar bauen
+```bash
+# Führe aus: build-navbar
+> Navbar-Structure aus Figma extrahiert
+> Mobile Navigation erstellt
+> Desktop Navigation erstellt
+> Mega-Menu implementiert (falls vorhanden)
+> Search-Integration
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Navbar-Komponenten erstellt:
+   - src/Header/Component.tsx aktualisiert
+   - src/Header/Nav/index.tsx erstellt
+   - src/Header/MobileNav/index.tsx erstellt
+   - src/Header/Search/index.tsx erstellt
+✅ Responsive Breakpoints implementiert
+✅ Accessibility Features hinzugefügt
+✅ Animation & Transitions konfiguriert
+```
+
+**Validierung nach Schritt 4.1:**
+- [ ] Desktop-Navigation funktioniert
+- [ ] Mobile-Navigation (Hamburger-Menu) funktioniert
+- [ ] Dropdown-Menus öffnen/schließen korrekt
+- [ ] Search-Funktion integriert
+- [ ] Logo verlinkt auf Homepage
+- [ ] Active-State bei aktueller Page
+- [ ] Keyboard-Navigation möglich (Tab, Enter, Escape)
+- [ ] Screen-Reader-Labels vorhanden
+
+**Test:**
+```typescript
+// Test Navigation
+describe('Navbar', () => {
+  it('rendert Desktop-Navigation auf großen Screens', () => {
+    setViewport(1920, 1080);
+    render(<Header />);
+    expect(screen.getByRole('navigation')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /menu/i })).not.toBeInTheDocument();
+  });
+  
+  it('rendert Mobile-Navigation auf kleinen Screens', () => {
+    setViewport(375, 667);
+    render(<Header />);
+    expect(screen.getByRole('button', { name: /menu/i })).toBeVisible();
+  });
+  
+  it('öffnet Mobile-Menu beim Klick', async () => {
+    setViewport(375, 667);
+    render(<Header />);
+    const menuButton = screen.getByRole('button', { name: /menu/i });
+    await userEvent.click(menuButton);
+    expect(screen.getByRole('navigation')).toBeVisible();
+  });
+  
+  it('schließt Menu mit Escape', async () => {
+    setViewport(375, 667);
+    render(<Header />);
+    const menuButton = screen.getByRole('button', { name: /menu/i });
+    await userEvent.click(menuButton);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('navigation')).not.toBeVisible();
+  });
+});
+
+console.log('✅ Navigation Tests bestanden');
+```
+
+**Context-Management:**
+```typescript
+await clearContext({
+  keepFiles: [
+    '.env.local',
+    'tailwind.config.mjs',
+    'src/app/globals.css',
+    'src/components/ui/button.tsx',
+    'src/Header/**/*'
+  ],
+  reason: 'Navigation fertiggestellt'
+});
+
+console.log('🧹 Context geleert - Phase 4 abgeschlossen');
+console.log('📊 Progress: 80% (4/5 Phasen)');
+```
+
+---
+
+### PHASE 5: Hero Sections
+**Geschätzter Zeitbedarf: 5-7 Minuten**
+
+#### Schritt 5.1: Hero-Komponenten bauen
+```bash
+# Führe aus: build-heroes
+> Hero-Layouts aus Figma extrahiert
+> Verschiedene Hero-Varianten erstellt
+> Responsive Images konfiguriert
+> Call-to-Action Buttons integriert
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Hero-Varianten erstellt:
+   - Hero mit Bild rechts
+   - Hero mit Hintergrundbild
+   - Hero mit Video
+   - Hero mit animierten Elementen
+   - Hero für Landing Pages
+✅ src/heroes/index.tsx erstellt
+✅ Responsive für alle Breakpoints
+✅ Performance-Optimierung (lazy loading, WebP)
+✅ SEO-Optimierung (Schema.org, Meta-Tags)
+```
+
+**Validierung nach Schritt 5.1:**
+- [ ] Alle Hero-Varianten rendern korrekt
+- [ ] Bilder werden optimiert geladen (Next.js Image)
+- [ ] Responsive auf allen Devices
+- [ ] Text ist lesbar auf allen Hintergründen (Contrast Check)
+- [ ] CTA-Buttons funktionieren
+- [ ] Animationen performen gut (60fps)
+- [ ] SEO-Tags vorhanden (h1, meta description)
+
+**Performance-Test:**
+```typescript
+// Test Performance
+import { measurePerformance } from '@/lib/test-utils';
+
+const metrics = await measurePerformance(() => {
+  render(<Hero />);
+});
+
+console.log('Performance Metrics:');
+console.log(`- First Paint: ${metrics.firstPaint}ms`);
+console.log(`- Time to Interactive: ${metrics.tti}ms`);
+console.log(`- Largest Contentful Paint: ${metrics.lcp}ms`);
+
+// Validiere Performance-Budgets
+if (metrics.lcp > 2500) {
+  console.warn('⚠️ LCP zu hoch, optimiere Bilder');
+}
+
+if (metrics.tti > 3800) {
+  console.warn('⚠️ TTI zu hoch, optimiere JavaScript');
+}
+
+// Lighthouse Score
+const lighthouseScore = await runLighthouse();
+console.log(`Lighthouse Score: ${lighthouseScore.performance}/100`);
+
+if (lighthouseScore.performance < 90) {
+  console.warn('⚠️ Lighthouse Performance unter 90');
+}
+```
+
+**Context-Management:**
+```typescript
+await clearContext({
+  keepFiles: [
+    '.env.local',
+    'tailwind.config.mjs',
+    'src/app/globals.css',
+    'src/components/ui/**/*',
+    'src/Header/**/*',
+    'src/heroes/Header1/*'
+  ],
+  reason: 'Hero-Sections fertig'
+});
+
+console.log('🧹 Context geleert - Phase 5 abgeschlossen');
+console.log('📊 Progress: 100% (5/5 Phasen)');
+```
+
+---
+
+## ✅ FINAL VALIDATION
+
+Nach allen Phasen führe Gesamt-Validierung durch:
+
+### 1. Build-Test
+```bash
+# Test Production Build
+npm run build
+
+# Erwartete Ausgabe:
+# ✓ Compiled successfully
+# ✓ Collecting page data
+# ✓ Generating static pages
+# ✓ Finalizing page optimization
+```
+
+**Bei Errors:**
+```typescript
+if (buildError.includes('Module not found')) {
+  console.error('❌ Fehlende Dependencies');
+  console.log('Führe aus: npm install');
+}
+
+if (buildError.includes('Type error')) {
+  console.error('❌ TypeScript-Fehler');
+  console.log('Führe aus: npm run type-check');
+}
+
+if (buildError.includes('CSS error')) {
+  console.error('❌ CSS-Fehler in globals.css');
+  console.log('Prüfe: src/app/globals.css');
+}
+```
+
+### 2. Dev-Server Test
+```bash
+# Starte Dev-Server
+npm run dev
+
+# Warte auf erfolgreichen Start
+# ✓ Ready on http://localhost:3000
+```
+
+### 3. Visual Regression Test
+```typescript
+// Screenshot-Vergleich mit Figma-Design
+const pages = [
+  '/',
+  '/about',
+  '/blog',
+  '/contact'
+];
+
+for (const page of pages) {
+  const screenshot = await captureScreenshot(page);
+  const figmaDesign = await getFigmaScreenshot(page);
+  
+  const similarity = compareImages(screenshot, figmaDesign);
+  
+  if (similarity < 0.95) {
+    console.warn(`⚠️ Seite ${page} weicht von Figma ab (${(similarity * 100).toFixed(1)}% Übereinstimmung)`);
+  } else {
+    console.log(`✅ Seite ${page} entspricht Figma-Design (${(similarity * 100).toFixed(1)}%)`);
+  }
+}
+```
+
+### 4. Accessibility Audit
+```typescript
+import { axe } from 'jest-axe';
+
+const results = await axe(document.body);
+
+if (results.violations.length > 0) {
+  console.warn(`⚠️ ${results.violations.length} Accessibility-Probleme gefunden:`);
+  results.violations.forEach(violation => {
+    console.warn(`- ${violation.description}`);
+    console.warn(`  Betrifft: ${violation.nodes.length} Elemente`);
+  });
+} else {
+  console.log('✅ Keine Accessibility-Probleme gefunden');
+}
+```
+
+### 5. Performance Audit
+```bash
+# Lighthouse CI
+npm run lighthouse
+
+# Bundle-Size Check
+npm run analyze
+```
+
+---
+
+## 📊 ABSCHLUSSBERICHT
+
+Generiere detaillierten Bericht:
+
+```markdown
+# Projekt-Setup Abschlussbericht
+
+Generiert: ${new Date().toISOString()}
+
+## ✅ Erfolgreich abgeschlossene Phasen
+
+### Phase 1: Projekt-Initialisierung ✅
+- Repository geklont
+- Secrets generiert
+- Vercel Blob Storage erstellt
+- Neon Database erstellt
+- .env.local konfiguriert
+
+### Phase 2: Design-System Setup ✅
+- Figma Design-Tokens extrahiert
+- Tailwind konfiguriert
+- globals.css erstellt
+- 45 Farben, 12 Typography-Rules, 32 Spacing-Werte
+
+### Phase 3: Component Styling ✅
+- Button-Komponenten erstellt
+- 5 Varianten, 4 Größen
+- Accessibility Features implementiert
+
+### Phase 4: Navigation ✅
+- Desktop-Navigation
+- Mobile-Navigation
+- Search-Integration
+- Keyboard-Navigation
+
+### Phase 5: Hero Sections ✅
+- 5 Hero-Varianten
+- Responsive Images
+- Performance-Optimierung
+- SEO-Optimierung
+
+## 📈 Metriken
+
+### Performance
+- Lighthouse Score: ${lighthouseScore}/100
+- First Contentful Paint: ${metrics.fcp}ms
+- Time to Interactive: ${metrics.tti}ms
+- Largest Contentful Paint: ${metrics.lcp}ms
+
+### Code Quality
+- TypeScript Errors: 0
+- ESLint Warnings: ${eslintWarnings}
+- Bundle Size: ${bundleSize}
+- Test Coverage: ${testCoverage}%
+
+### Accessibility
+- WCAG 2.1 AA Compliance: ✅
+- Axe Violations: ${axeViolations}
+- Keyboard Navigation: ✅
+- Screen Reader Support: ✅
+
+## 🎯 Design-Treue
+
+- Farben: 100% Übereinstimmung
+- Typografie: 100% Übereinstimmung
+- Spacing: 100% Übereinstimmung
+- Layout: ${layoutSimilarity}% Übereinstimmung
+
+## 📦 Erstellte Dateien
+
+- tailwind.config.mjs
+- src/app/globals.css
+- src/components/ui/button.tsx
+- src/Header/Component.tsx
+- src/Header/Nav/index.tsx
+- src/Header/MobileNav/index.tsx
+- src/heroes//Header1/index.tsx
+- FIGMA_DESIGN_TOKENS.md
+- PROJECT_SETUP_REPORT.md
+
+## 🔐 Credentials
+
+Alle Credentials sicher in .env.local gespeichert:
+- ✅ PAYLOAD_SECRET
+- ✅ DATABASE_URI
+- ✅ BLOB_READ_WRITE_TOKEN
+- ✅ DATABASE_URL
+- ✅ FIGMA_ACCESS_TOKEN
+
+## 🚀 Nächste Schritte
+
+1. Führe Tests aus: `npm test`
+2. Starte Dev-Server: `npm run dev`
+3. Öffne http://localhost:3000
+4. Prüfe visuelle Übereinstimmung mit Figma
+5. Teste auf verschiedenen Devices
+6. Deploy zu Vercel: `vercel --prod`
+
+## 💾 Backups
+
+Alle kritischen Dateien wurden gesichert:
+- tailwind.config.mjs.backup.${timestamp}
+- globals.css.backup.${timestamp}
+
+## ⏱️ Gesamtdauer
+
+Start: ${startTime}
+Ende: ${endTime}
+Dauer: ${duration} Minuten
+
+---
+
+✅ Projekt vollständig aufgebaut und validiert!
+```
+
+---
+
+## 🐛 GLOBALE FEHLERBEHANDLUNG
+
+### Automatisches Rollback bei kritischen Fehlern
+
+```typescript
+class WorkflowError extends Error {
+  constructor(
+    public step: string,
+    public phase: string,
+    public originalError: Error,
+    public rollbackable: boolean = true
+  ) {
+    super(`Fehler in ${phase} - ${step}: ${originalError.message}`);
+  }
+}
+
+async function executeWorkflow() {
+  const checkpoints: Checkpoint[] = [];
+  
+  try {
+    // Phase 1
+    const phase1 = await executePhase1();
+    checkpoints.push({ phase: 1, files: [...] });
+    
+    // Phase 2
+    const phase2 = await executePhase2();
+    checkpoints.push({ phase: 2, files: [...] });
+    
+    // Phase 3
+    const phase3 = await executePhase3();
+    checkpoints.push({ phase: 3, files: [...] });
+    
+    // Phase 4
+    const phase4 = await executePhase4();
+    checkpoints.push({ phase: 4, files: [...] });
+    
+    // Phase 5
+    const phase5 = await executePhase5();
+    checkpoints.push({ phase: 5, files: [...] });
+    
+  } catch (error) {
+    if (error instanceof WorkflowError) {
+      console.error(`\n❌ KRITISCHER FEHLER IN ${error.phase}\n`);
+      console.error(`Schritt: ${error.step}`);
+      console.error(`Fehler: ${error.originalError.message}\n`);
+      
+      if (error.rollbackable) {
+        console.log('🔄 Führe Rollback durch...\n');
+        
+        // Rollback zu letztem stabilen Checkpoint
+        const lastCheckpoint = checkpoints[checkpoints.length - 1];
+        await rollbackToCheckpoint(lastCheckpoint);
+        
+        console.log(`✅ Rollback zu Phase ${lastCheckpoint.phase} erfolgreich`);
+        console.log(`📋 Du kannst ab Phase ${lastCheckpoint.phase + 1} fortfahren`);
+      } else {
+        console.error('❌ Rollback nicht möglich - Manuelles Eingreifen erforderlich');
+        console.log('\nFehleranalyse:');
+        console.log(error.originalError.stack);
+      }
+      
+      // Generiere Fehlerbericht
+      await generateErrorReport(error, checkpoints);
+    }
+  }
+}
+```
+
+---
+
+## 📝 LOGGING & MONITORING
+
+```typescript
+// Detailliertes Logging für jeden Schritt
+class WorkflowLogger {
+  private logs: LogEntry[] = [];
+  
+  log(level: 'info' | 'warn' | 'error', message: string, meta?: any) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      meta
+    };
+    
+    this.logs.push(entry);
+    
+    // Console-Ausgabe mit Farben
+    const colors = {
+      info: '\x1b[36m',    // Cyan
+      warn: '\x1b[33m',    // Yellow
+      error: '\x1b[31m',   // Red
+      reset: '\x1b[0m'
+    };
+    
+    console.log(`${colors[level]}[${level.toUpperCase()}] ${message}${colors.reset}`);
+    
+    if (meta) {
+      console.log(JSON.stringify(meta, null, 2));
+    }
+  }
+  
+  async saveToFile() {
+    const filename = `workflow-log-${Date.now()}.json`;
+    await fs.writeFile(filename, JSON.stringify(this.logs, null, 2));
+    console.log(`\n📄 Log gespeichert: ${filename}`);
+  }
+}
+
+const logger = new WorkflowLogger();
+```
+
+---
+
+## 🎯 VERWENDUNG
+
+### Automatischer Modus
+```
+In Cursor AI: Cmd+K → "Build Full Payload Project"
+
+Der komplette Workflow wird automatisch ausgeführt.
+```
+
+### Schrittweiser Modus
+```typescript
+// Führe einzelne Phasen aus
+await executePhase(1); // Projekt-Initialisierung
+await executePhase(2); // Design-System
+await executePhase(3); // Component Styling
+await executePhase(4); // Navigation
+await executePhase(5); // Hero Sections
+```
+
+### Recovery-Modus
+```typescript
+// Bei Abbruch von bestimmter Phase fortsetzen
+await resumeFrom(phase: 3);
+```
+
+---
+
+## ✨ OPTIMIERUNGEN
+
+### 1. Parallelisierung wo möglich
+```typescript
+// Unabhängige Tasks parallel ausführen
+await Promise.all([
+  generateSecrets(),
+  installDependencies(),
+  setupGitHooks()
+]);
+```
+
+### 2. Caching
+```typescript
+// Cache Figma Design-Tokens
+const cache = new Map();
+if (cache.has('figma-tokens')) {
+  tokens = cache.get('figma-tokens');
+} else {
+  tokens = await fetchFigmaTokens();
+  cache.set('figma-tokens', tokens);
+}
+```
+
+### 3. Inkrementelle Builds
+```typescript
+// Nur geänderte Dateien neu bauen
+const changedFiles = await getChangedFiles();
+if (changedFiles.includes('tailwind.config.mjs')) {
+  await rebuildCSS();
+}
+```
+
+---
+
+✅ **Workflow vollständig optimiert und produktionsbereit!**

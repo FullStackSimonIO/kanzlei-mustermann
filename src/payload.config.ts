@@ -5,6 +5,7 @@ import sharp from 'sharp' // sharp-import
 import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import { fileURLToPath } from 'url'
+import { payloadTotp } from 'payload-totp'
 
 import { Categories } from './collections/Categories'
 import { Media } from './collections/Media'
@@ -138,6 +139,18 @@ export default buildConfig({
         media: true,
       },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
+    }),
+    payloadTotp({
+      collection: 'users',
+      // Optional: Force users to set up TOTP after first login (default: false)
+      // forceSetup: process.env.TOTP_FORCE_SETUP === 'true',
+      // Optional: Customize TOTP settings
+      // totp: {
+      //   issuer: 'Fullstack Factory CMS',
+      //   digits: 6,
+      //   period: 30,
+      //   algorithm: 'SHA1',
+      // },
     }),
     /*payloadDashboardAnalytics({
       provider: {

@@ -1,0 +1,1073 @@
+---
+description: Optimiert Tailwind CSS Konfiguration basierend auf Figma Design-Tokens via MCP
+globs:
+  - "tailwind.config.{js,ts,mjs}"
+  - "src/app/globals.css"
+  - "*.{tsx,jsx,ts,js}"
+alwaysRun: false
+---
+
+# Figma zu Tailwind Optimierung
+
+## Ziel
+Analysiere das Figma-Design via MCP und aktualisiere `tailwind.config.mjs` und `src/app/globals.css` so, dass sie 1:1 dem Figma-Design entsprechen.
+
+## Sicherheitsmaßnahmen
+
+### 1. VORAUSSETZUNGEN PRÜFEN
+Prüfe ob folgende Dateien existieren:
+- ✅ `tailwind.config.mjs` (im Root)
+- ✅ `src/app/globals.css`
+- ✅ Figma MCP Server ist konfiguriert
+
+**Falls Dateien fehlen:**
+- STOPPE den Vorgang
+- Informiere den Benutzer welche Dateien fehlen
+- Gebe die korrekten Pfade an
+
+### 2. BACKUP ERSTELLEN
+Erstelle IMMER Backups vor Änderungen:
+```bash
+# Backup erstellen mit Zeitstempel
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+Copy-Item tailwind.config.mjs "tailwind.config.mjs.backup.$timestamp"
+Copy-Item src/app/globals.css "src/app/globals.css.backup.$timestamp"
+```
+
+### 3. FIGMA DATEN VALIDIEREN
+Prüfe ob Figma-Daten vollständig sind:
+- Mindestens 1 Farbe definiert
+- Mindestens 1 Typografie-Regel
+- Spacing-Werte vorhanden
+- Border-Radius Werte vorhanden
+
+**Falls unvollständig:**
+- Zeige Warnung an
+- Frage ob trotzdem fortgefahren werden soll
+- Liste fehlende Design-Tokens auf
+
+## Schritt-für-Schritt Ablauf
+
+### SCHRITT 1: Figma Design-Tokens extrahieren
+
+```typescript
+// Nutze Figma MCP Server um Design zu laden
+const figmaDesign = await mcp.figma.getDesignTokens({
+  fileKey: process.env.FIGMA_FILE_KEY || 'BENUTZER_MUSS_KEY_ANGEBEN',
+  nodeIds: ['alle'] // oder spezifische Node IDs
+});
+
+// Validiere die Struktur
+if (!figmaDesign || !figmaDesign.colors) {
+  throw new Error('❌ Figma-Daten konnten nicht geladen werden. Prüfe FIGMA_FILE_KEY in .env.local');
+}
+```
+
+**Extrahiere folgende Design-Tokens:**
+
+#### 1.1 Farben
+```typescript
+interface ColorTokens {
+  // Primärfarben
+  primary: {
+    50: string;
+    100: string;
+    200: string;
+    300: string;
+    400: string;
+    500: string; // Hauptfarbe
+    600: string;
+    700: string;
+    800: string;
+    900: string;
+    950: string;
+  };
+  // Sekundärfarben
+  secondary: { /* gleiche Struktur */ };
+  // Neutralfarben
+  gray: { /* gleiche Struktur */ };
+  // Semantische Farben
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+  // UI Farben
+  background: string;
+  foreground: string;
+  card: string;
+  'card-foreground': string;
+  popover: string;
+  'popover-foreground': string;
+  muted: string;
+  'muted-foreground': string;
+  border: string;
+  input: string;
+  ring: string;
+}
+```
+
+#### 1.2 Typografie
+```typescript
+interface TypographyTokens {
+  fontFamily: {
+    sans: string[];
+    serif: string[];
+    mono: string[];
+  };
+  fontSize: {
+    xs: [string, { lineHeight: string; letterSpacing?: string }];
+    sm: [string, { lineHeight: string; letterSpacing?: string }];
+    base: [string, { lineHeight: string; letterSpacing?: string }];
+    lg: [string, { lineHeight: string; letterSpacing?: string }];
+    xl: [string, { lineHeight: string; letterSpacing?: string }];
+    '2xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '3xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '4xl': [string, { lineHeight: string; letterSpacing?: string }];
+    '5xl': [string, { lineHeight: string; letterSpacing?: string }];
+  };
+  fontWeight: {
+    thin: string;
+    light: string;
+    normal: string;
+    medium: string;
+    semibold: string;
+    bold: string;
+    extrabold: string;
+  };
+}
+```
+
+#### 1.3 Spacing (Abstände)
+```typescript
+interface SpacingTokens {
+  0: '0px';
+  px: '1px';
+  0.5: string;
+  1: string;
+  1.5: string;
+  2: string;
+  2.5: string;
+  3: string;
+  3.5: string;
+  4: string;
+  5: string;
+  6: string;
+  7: string;
+  8: string;
+  9: string;
+  10: string;
+  11: string;
+  12: string;
+  14: string;
+  16: string;
+  20: string;
+  24: string;
+  28: string;
+  32: string;
+  36: string;
+  40: string;
+  44: string;
+  48: string;
+  52: string;
+  56: string;
+  60: string;
+  64: string;
+  72: string;
+  80: string;
+  96: string;
+}
+```
+
+#### 1.4 Border Radius
+```typescript
+interface BorderRadiusTokens {
+  none: '0px';
+  sm: string;
+  DEFAULT: string;
+  md: string;
+  lg: string;
+  xl: string;
+  '2xl': string;
+  '3xl': string;
+  full: '9999px';
+}
+```
+
+#### 1.5 Shadows
+```typescript
+interface ShadowTokens {
+  sm: string;
+  DEFAULT: string;
+  md: string;
+  lg: string;
+  xl: string;
+  '2xl': string;
+  inner: string;
+  none: 'none';
+}
+```
+
+#### 1.6 Breakpoints
+```typescript
+interface BreakpointTokens {
+  sm: string; // '640px'
+  md: string; // '768px'
+  lg: string; // '1024px'
+  xl: string; // '1280px'
+  '2xl': string; // '1536px'
+}
+```
+
+### SCHRITT 2: Validierung der extrahierten Daten
+
+```typescript
+// Prüfe jede Token-Kategorie
+const validationErrors: string[] = [];
+
+// Farben validieren
+if (!figmaDesign.colors.primary || !figmaDesign.colors.primary[500]) {
+  validationErrors.push('❌ Primärfarbe fehlt oder ist unvollständig');
+}
+
+// Typografie validieren
+if (!figmaDesign.typography.fontFamily.sans || figmaDesign.typography.fontFamily.sans.length === 0) {
+  validationErrors.push('❌ Haupt-Schriftart fehlt');
+}
+
+// Spacing validieren
+if (!figmaDesign.spacing['4'] || !figmaDesign.spacing['8']) {
+  validationErrors.push('⚠️ Basis-Spacing-Werte fehlen, verwende Tailwind-Defaults');
+}
+
+// Falls kritische Fehler:
+if (validationErrors.some(e => e.startsWith('❌'))) {
+  console.error('KRITISCHE VALIDIERUNGSFEHLER:');
+  validationErrors.forEach(e => console.error(e));
+  
+  const userResponse = await askUser('Trotzdem fortfahren? (Fehlende Werte werden mit Defaults gefüllt)');
+  if (!userResponse) {
+    return { success: false, message: 'Vorgang vom Benutzer abgebrochen' };
+  }
+}
+```
+
+### SCHRITT 3: tailwind.config.mjs generieren
+
+```typescript
+// filepath: tailwind.config.mjs
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  // WICHTIG: Korrekte Pfade für elisa-frontend Projekt
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/blocks/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/Header/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/Footer/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  
+  // Bestehende Konfiguration NICHT überschreiben
+  darkMode: undefined, // ENTFERNT - kein Dark Mode
+  
+  theme: {
+    // Extend statt replace - damit Tailwind-Defaults erhalten bleiben
+    extend: {
+      // === FARBEN === //
+      colors: {
+        // Primärfarben aus Figma
+        primary: {
+          50: '${figmaDesign.colors.primary[50]}',
+          100: '${figmaDesign.colors.primary[100]}',
+          200: '${figmaDesign.colors.primary[200]}',
+          300: '${figmaDesign.colors.primary[300]}',
+          400: '${figmaDesign.colors.primary[400]}',
+          500: '${figmaDesign.colors.primary[500]}',
+          600: '${figmaDesign.colors.primary[600]}',
+          700: '${figmaDesign.colors.primary[700]}',
+          800: '${figmaDesign.colors.primary[800]}',
+          900: '${figmaDesign.colors.primary[900]}',
+          950: '${figmaDesign.colors.primary[950]}',
+          DEFAULT: '${figmaDesign.colors.primary[500]}',
+        },
+        
+        // Sekundärfarben
+        secondary: {
+          // ... analog zu primary
+          DEFAULT: '${figmaDesign.colors.secondary[500]}',
+        },
+        
+        // Neutralfarben
+        gray: {
+          // ... analog
+        },
+        
+        // Semantische Farben
+        success: '${figmaDesign.colors.success}',
+        warning: '${figmaDesign.colors.warning}',
+        error: '${figmaDesign.colors.error}',
+        info: '${figmaDesign.colors.info}',
+        
+        // UI-spezifische Farben (für shadcn/ui Kompatibilität)
+        background: '${figmaDesign.colors.background}',
+        foreground: '${figmaDesign.colors.foreground}',
+        card: '${figmaDesign.colors.card}',
+        'card-foreground': '${figmaDesign.colors.cardForeground}',
+        popover: '${figmaDesign.colors.popover}',
+        'popover-foreground': '${figmaDesign.colors.popoverForeground}',
+        muted: '${figmaDesign.colors.muted}',
+        'muted-foreground': '${figmaDesign.colors.mutedForeground}',
+        accent: '${figmaDesign.colors.accent}',
+        'accent-foreground': '${figmaDesign.colors.accentForeground}',
+        destructive: '${figmaDesign.colors.destructive}',
+        'destructive-foreground': '${figmaDesign.colors.destructiveForeground}',
+        border: '${figmaDesign.colors.border}',
+        input: '${figmaDesign.colors.input}',
+        ring: '${figmaDesign.colors.ring}',
+        
+        // Chart-Farben (für dein Chart-Component)
+        chart: {
+          1: '${figmaDesign.colors.chart1}',
+          2: '${figmaDesign.colors.chart2}',
+          3: '${figmaDesign.colors.chart3}',
+          4: '${figmaDesign.colors.chart4}',
+          5: '${figmaDesign.colors.chart5}',
+        },
+      },
+      
+      // === TYPOGRAFIE === //
+      fontFamily: {
+        sans: ${JSON.stringify(figmaDesign.typography.fontFamily.sans)},
+        serif: ${JSON.stringify(figmaDesign.typography.fontFamily.serif)},
+        mono: ${JSON.stringify(figmaDesign.typography.fontFamily.mono)},
+      },
+      
+      fontSize: {
+        xs: ${JSON.stringify(figmaDesign.typography.fontSize.xs)},
+        sm: ${JSON.stringify(figmaDesign.typography.fontSize.sm)},
+        base: ${JSON.stringify(figmaDesign.typography.fontSize.base)},
+        lg: ${JSON.stringify(figmaDesign.typography.fontSize.lg)},
+        xl: ${JSON.stringify(figmaDesign.typography.fontSize.xl)},
+        '2xl': ${JSON.stringify(figmaDesign.typography.fontSize['2xl'])},
+        '3xl': ${JSON.stringify(figmaDesign.typography.fontSize['3xl'])},
+        '4xl': ${JSON.stringify(figmaDesign.typography.fontSize['4xl'])},
+        '5xl': ${JSON.stringify(figmaDesign.typography.fontSize['5xl'])},
+        '6xl': ${JSON.stringify(figmaDesign.typography.fontSize['6xl'])},
+        '7xl': ${JSON.stringify(figmaDesign.typography.fontSize['7xl'])},
+        '8xl': ${JSON.stringify(figmaDesign.typography.fontSize['8xl'])},
+        '9xl': ${JSON.stringify(figmaDesign.typography.fontSize['9xl'])},
+      },
+      
+      fontWeight: {
+        thin: '${figmaDesign.typography.fontWeight.thin}',
+        extralight: '${figmaDesign.typography.fontWeight.extralight}',
+        light: '${figmaDesign.typography.fontWeight.light}',
+        normal: '${figmaDesign.typography.fontWeight.normal}',
+        medium: '${figmaDesign.typography.fontWeight.medium}',
+        semibold: '${figmaDesign.typography.fontWeight.semibold}',
+        bold: '${figmaDesign.typography.fontWeight.bold}',
+        extrabold: '${figmaDesign.typography.fontWeight.extrabold}',
+        black: '${figmaDesign.typography.fontWeight.black}',
+      },
+      
+      lineHeight: {
+        // Aus Figma extrahiert
+        ...${JSON.stringify(figmaDesign.typography.lineHeight)},
+      },
+      
+      letterSpacing: {
+        // Aus Figma extrahiert
+        ...${JSON.stringify(figmaDesign.typography.letterSpacing)},
+      },
+      
+      // === SPACING === //
+      spacing: {
+        // Figma-Werte überschreiben Tailwind-Defaults
+        ...${JSON.stringify(figmaDesign.spacing)},
+      },
+      
+      // === BORDER RADIUS === //
+      borderRadius: {
+        none: '0px',
+        sm: '${figmaDesign.borderRadius.sm}',
+        DEFAULT: '${figmaDesign.borderRadius.DEFAULT}',
+        md: '${figmaDesign.borderRadius.md}',
+        lg: '${figmaDesign.borderRadius.lg}',
+        xl: '${figmaDesign.borderRadius.xl}',
+        '2xl': '${figmaDesign.borderRadius['2xl']}',
+        '3xl': '${figmaDesign.borderRadius['3xl']}',
+        full: '9999px',
+      },
+      
+      // === SHADOWS === //
+      boxShadow: {
+        sm: '${figmaDesign.shadows.sm}',
+        DEFAULT: '${figmaDesign.shadows.DEFAULT}',
+        md: '${figmaDesign.shadows.md}',
+        lg: '${figmaDesign.shadows.lg}',
+        xl: '${figmaDesign.shadows.xl}',
+        '2xl': '${figmaDesign.shadows['2xl']}',
+        inner: '${figmaDesign.shadows.inner}',
+        none: 'none',
+      },
+      
+      // === BREAKPOINTS === //
+      screens: {
+        sm: '${figmaDesign.breakpoints.sm}',
+        md: '${figmaDesign.breakpoints.md}',
+        lg: '${figmaDesign.breakpoints.lg}',
+        xl: '${figmaDesign.breakpoints.xl}',
+        '2xl': '${figmaDesign.breakpoints['2xl']}',
+      },
+      
+      // === ANIMATIONS === //
+      keyframes: {
+        // Aus Figma extrahierte Animationen
+        ...${JSON.stringify(figmaDesign.animations?.keyframes || {})},
+      },
+      animation: {
+        // Aus Figma extrahierte Animationen
+        ...${JSON.stringify(figmaDesign.animations?.animation || {})},
+      },
+    },
+  },
+  
+  // Bestehende Plugins beibehalten
+  plugins: [
+    // Tailwind Typography für RichText
+    require('@tailwindcss/typography'),
+    // Weitere Plugins falls vorhanden
+  ],
+}
+
+export default config
+```
+
+### SCHRITT 4: globals.css generieren
+
+```css
+/* filepath: src/app/globals.css */
+
+/* === TAILWIND BASE === */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === CSS CUSTOM PROPERTIES === */
+/* Generiert aus Figma Design-Tokens */
+
+@layer base {
+  :root {
+    /* === Farben === */
+    /* Primärfarben */
+    --color-primary-50: ${figmaDesign.colors.primary[50]};
+    --color-primary-100: ${figmaDesign.colors.primary[100]};
+    --color-primary-200: ${figmaDesign.colors.primary[200]};
+    --color-primary-300: ${figmaDesign.colors.primary[300]};
+    --color-primary-400: ${figmaDesign.colors.primary[400]};
+    --color-primary-500: ${figmaDesign.colors.primary[500]};
+    --color-primary-600: ${figmaDesign.colors.primary[600]};
+    --color-primary-700: ${figmaDesign.colors.primary[700]};
+    --color-primary-800: ${figmaDesign.colors.primary[800]};
+    --color-primary-900: ${figmaDesign.colors.primary[900]};
+    --color-primary-950: ${figmaDesign.colors.primary[950]};
+    
+    /* Sekundärfarben */
+    --color-secondary-50: ${figmaDesign.colors.secondary[50]};
+    /* ... analog zu primary ... */
+    
+    /* Neutralfarben */
+    --color-gray-50: ${figmaDesign.colors.gray[50]};
+    /* ... */
+    
+    /* Semantische Farben */
+    --color-success: ${figmaDesign.colors.success};
+    --color-warning: ${figmaDesign.colors.warning};
+    --color-error: ${figmaDesign.colors.error};
+    --color-info: ${figmaDesign.colors.info};
+    
+    /* UI-Farben für shadcn/ui */
+    --background: ${figmaDesign.colors.background};
+    --foreground: ${figmaDesign.colors.foreground};
+    
+    --card: ${figmaDesign.colors.card};
+    --card-foreground: ${figmaDesign.colors.cardForeground};
+    
+    --popover: ${figmaDesign.colors.popover};
+    --popover-foreground: ${figmaDesign.colors.popoverForeground};
+    
+    --primary: ${figmaDesign.colors.primary[500]};
+    --primary-foreground: ${figmaDesign.colors.primaryForeground};
+    
+    --secondary: ${figmaDesign.colors.secondary[500]};
+    --secondary-foreground: ${figmaDesign.colors.secondaryForeground};
+    
+    --muted: ${figmaDesign.colors.muted};
+    --muted-foreground: ${figmaDesign.colors.mutedForeground};
+    
+    --accent: ${figmaDesign.colors.accent};
+    --accent-foreground: ${figmaDesign.colors.accentForeground};
+    
+    --destructive: ${figmaDesign.colors.destructive};
+    --destructive-foreground: ${figmaDesign.colors.destructiveForeground};
+    
+    --border: ${figmaDesign.colors.border};
+    --input: ${figmaDesign.colors.input};
+    --ring: ${figmaDesign.colors.ring};
+    
+    /* Chart-Farben */
+    --chart-1: ${figmaDesign.colors.chart1};
+    --chart-2: ${figmaDesign.colors.chart2};
+    --chart-3: ${figmaDesign.colors.chart3};
+    --chart-4: ${figmaDesign.colors.chart4};
+    --chart-5: ${figmaDesign.colors.chart5};
+    
+    /* === Typografie === */
+    --font-sans: ${figmaDesign.typography.fontFamily.sans.join(', ')};
+    --font-serif: ${figmaDesign.typography.fontFamily.serif.join(', ')};
+    --font-mono: ${figmaDesign.typography.fontFamily.mono.join(', ')};
+    
+    /* === Spacing === */
+    --spacing-xs: ${figmaDesign.spacing.xs};
+    --spacing-sm: ${figmaDesign.spacing.sm};
+    --spacing-md: ${figmaDesign.spacing.md};
+    --spacing-lg: ${figmaDesign.spacing.lg};
+    --spacing-xl: ${figmaDesign.spacing.xl};
+    
+    /* === Border Radius === */
+    --radius-sm: ${figmaDesign.borderRadius.sm};
+    --radius: ${figmaDesign.borderRadius.DEFAULT};
+    --radius-md: ${figmaDesign.borderRadius.md};
+    --radius-lg: ${figmaDesign.borderRadius.lg};
+    --radius-xl: ${figmaDesign.borderRadius.xl};
+    
+    /* === Shadows === */
+    --shadow-sm: ${figmaDesign.shadows.sm};
+    --shadow: ${figmaDesign.shadows.DEFAULT};
+    --shadow-md: ${figmaDesign.shadows.md};
+    --shadow-lg: ${figmaDesign.shadows.lg};
+    --shadow-xl: ${figmaDesign.shadows.xl};
+  }
+  
+  /* === BASE STYLES === */
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* === TYPOGRAFIE BASIS === */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+    font-family: var(--font-sans);
+  }
+  
+  h1 {
+    @apply text-5xl leading-tight;
+  }
+  
+  h2 {
+    @apply text-4xl leading-tight;
+  }
+  
+  h3 {
+    @apply text-3xl leading-snug;
+  }
+  
+  h4 {
+    @apply text-2xl leading-snug;
+  }
+  
+  h5 {
+    @apply text-xl leading-normal;
+  }
+  
+  h6 {
+    @apply text-lg leading-normal;
+  }
+  
+  p {
+    @apply text-base leading-relaxed;
+  }
+  
+  /* === LINKS === */
+  a {
+    @apply text-primary underline-offset-4 hover:underline;
+  }
+  
+  /* === CODE === */
+  code {
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold;
+  }
+  
+  pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-4;
+  }
+  
+  /* === FORMS === */
+  input, textarea, select {
+    @apply rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+  
+  button {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+}
+
+/* === CUSTOM COMPONENTS === */
+@layer components {
+  /* Container mit Figma-Breakpoints */
+  .container {
+    @apply mx-auto w-full;
+    max-width: ${figmaDesign.breakpoints['2xl']};
+    padding-left: ${figmaDesign.spacing.container || '1rem'};
+    padding-right: ${figmaDesign.spacing.container || '1rem'};
+  }
+  
+  /* Card Component aus Figma */
+  .card {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+  }
+  
+  /* Button Variants aus Figma */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-600;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary-600;
+  }
+  
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  /* Badge Component aus Figma */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  
+  .badge-primary {
+    @apply bg-primary text-primary-foreground;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary text-secondary-foreground;
+  }
+}
+
+/* === UTILITIES === */
+@layer utilities {
+  /* Text Gradients aus Figma */
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
+  }
+  
+  /* Glassmorphism Effekte */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  /* Animation Utilities */
+  .animate-in {
+    animation: animate-in 0.3s ease-out;
+  }
+  
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* === PROSE STYLES (für RichText Component) === */
+@layer base {
+  .prose {
+    @apply text-foreground;
+    max-width: 65ch;
+  }
+  
+  .prose :where(h1, h2, h3, h4, h5, h6):not(:where([class~="not-prose"] *)) {
+    @apply font-bold text-foreground;
+  }
+  
+  .prose :where(a):not(:where([class~="not-prose"] *)) {
+    @apply text-primary no-underline hover:underline;
+  }
+  
+  .prose :where(code):not(:where([class~="not-prose"] *)) {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-sm;
+  }
+  
+  .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
+    @apply border-l-4 border-primary pl-4 italic text-muted-foreground;
+  }
+}
+
+/* === LEXICAL EDITOR STYLES === */
+/* Für dein RichText-Editor Component */
+.lexical-editor {
+  @apply min-h-[200px] rounded-md border border-input bg-background p-4;
+}
+
+.lexical-editor:focus-within {
+  @apply ring-2 ring-ring ring-offset-2;
+}
+
+/* Color Picker Styles (für lexical-ext Plugin) */
+.color-picker-button {
+  @apply h-6 w-6 rounded border-2 border-gray-300 cursor-pointer;
+  @apply hover:border-primary transition-colors;
+}
+
+.color-picker-button.active {
+  @apply border-primary ring-2 ring-primary/50;
+}
+
+/* Video Embed Styles (für YouTube/Vimeo) */
+.video-embed-container {
+  @apply relative w-full overflow-hidden rounded-lg;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.video-embed-container iframe {
+  @apply absolute top-0 left-0 w-full h-full;
+}
+```
+
+### SCHRITT 5: Validierung nach dem Schreiben
+
+```typescript
+// Prüfe ob Dateien korrekt geschrieben wurden
+const tailwindConfigExists = fs.existsSync('tailwind.config.mjs');
+const globalsCssExists = fs.existsSync('src/app/globals.css');
+
+if (!tailwindConfigExists || !globalsCssExists) {
+  throw new Error('❌ Dateien konnten nicht geschrieben werden!');
+}
+
+// Prüfe ob Dateien valid sind
+try {
+  // Tailwind Config validieren (als ES Module)
+  const tailwindConfig = await import('./tailwind.config.mjs');
+  if (!tailwindConfig.default) {
+    throw new Error('tailwind.config.mjs hat keinen default export');
+  }
+  
+  // CSS validieren (auf Syntax-Fehler prüfen)
+  const cssContent = fs.readFileSync('src/app/globals.css', 'utf-8');
+  if (!cssContent.includes('@tailwind base')) {
+    throw new Error('globals.css fehlen @tailwind directives');
+  }
+  
+  console.log('✅ Dateien erfolgreich validiert');
+} catch (error) {
+  console.error('❌ Validierungsfehler:', error);
+  
+  // Backups wiederherstellen
+  const backups = fs.readdirSync('.').filter(f => f.includes('.backup.'));
+  if (backups.length > 0) {
+    const latestBackup = backups.sort().pop();
+    console.log(`🔄 Stelle Backup wieder her: ${latestBackup}`);
+    // Restore logic...
+  }
+}
+```
+
+### SCHRITT 6: Dokumentation generieren
+
+```markdown
+// filepath: FIGMA_DESIGN_TOKENS.md
+# Figma Design-Tokens Import
+
+Generiert am: ${new Date().toISOString()}
+Figma File: ${process.env.FIGMA_FILE_KEY}
+
+## Importierte Design-Tokens
+
+### Farben
+${Object.entries(figmaDesign.colors).map(([name, value]) => `- **${name}**: ${value}`).join('\n')}
+
+### Typografie
+**Font Families:**
+${Object.entries(figmaDesign.typography.fontFamily).map(([name, fonts]) => `- **${name}**: ${fonts.join(', ')}`).join('\n')}
+
+**Font Sizes:**
+${Object.entries(figmaDesign.typography.fontSize).map(([name, [size, config]]) => `- **${name}**: ${size} (line-height: ${config.lineHeight})`).join('\n')}
+
+### Spacing
+${Object.entries(figmaDesign.spacing).map(([name, value]) => `- **${name}**: ${value}`).join('\n')}
+
+### Border Radius
+${Object.entries(figmaDesign.borderRadius).map(([name, value]) => `- **${name}**: ${value}`).join('\n')}
+
+### Shadows
+${Object.entries(figmaDesign.shadows).map(([name, value]) => `- **${name}**: ${value}`).join('\n')}
+
+## Verwendung
+
+### In Components
+```tsx
+// Farben
+<div className="bg-primary-500 text-white">Primary Button</div>
+
+// Spacing
+<div className="px-4 py-2">Content</div>
+
+// Border Radius
+<div className="rounded-lg">Card</div>
+
+// Shadows
+<div className="shadow-md">Card with shadow</div>
+```
+
+### Als CSS Variables
+```css
+.custom-element {
+  background-color: var(--color-primary-500);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+```
+
+## Vergleich mit Figma
+
+Vergleiche deine Implementation mit dem Figma-Design:
+${process.env.FIGMA_FILE_URL || 'https://figma.com/file/...'}
+
+## Backup
+
+Falls Probleme auftreten, Backups befinden sich hier:
+- tailwind.config.mjs.backup.${timestamp}
+- src/app/globals.css.backup.${timestamp}
+```
+
+## SCHRITT 7: Abschlussbericht
+
+```typescript
+// Generiere Zusammenfassung
+const summary = {
+  success: true,
+  timestamp: new Date().toISOString(),
+  filesUpdated: [
+    'tailwind.config.mjs',
+    'src/app/globals.css',
+    'FIGMA_DESIGN_TOKENS.md'
+  ],
+  tokensImported: {
+    colors: Object.keys(figmaDesign.colors).length,
+    typography: Object.keys(figmaDesign.typography).length,
+    spacing: Object.keys(figmaDesign.spacing).length,
+    borderRadius: Object.keys(figmaDesign.borderRadius).length,
+    shadows: Object.keys(figmaDesign.shadows).length,
+  },
+  warnings: validationErrors.filter(e => e.startsWith('⚠️')),
+  backupFiles: [
+    `tailwind.config.mjs.backup.${timestamp}`,
+    `src/app/globals.css.backup.${timestamp}`,
+  ],
+  nextSteps: [
+    '1. Starte Dev-Server neu: npm run dev',
+    '2. Prüfe UI-Components auf korrekte Darstellung',
+    '3. Vergleiche mit Figma-Design',
+    '4. Teste Responsive Breakpoints',
+    '5. Prüfe Color Contrast für Accessibility',
+  ],
+};
+
+console.log('\n✅ FIGMA ZU TAILWIND OPTIMIERUNG ABGESCHLOSSEN\n');
+console.log(JSON.stringify(summary, null, 2));
+```
+
+## POST-PROCESSING CHECKS
+
+Nach dem Command ausführen:
+
+### 1. Dev-Server Neustart
+```bash
+# Stoppe aktuellen Server
+# Starte neu
+npm run dev
+```
+
+### 2. Visuelle Prüfung
+- [ ] Öffne http://localhost:3000
+- [ ] Prüfe Header-Component
+- [ ] Prüfe Footer-Component
+- [ ] Prüfe Card-Components
+- [ ] Prüfe Button-Styles
+- [ ] Prüfe Typography (H1-H6, p, a)
+- [ ] Prüfe Forms (input, textarea, button)
+
+### 3. Responsive Prüfung
+- [ ] Mobile (< 640px)
+- [ ] Tablet (640px - 1024px)
+- [ ] Desktop (> 1024px)
+
+### 4. Component Prüfung
+- [ ] RichText Component (Lexical Editor)
+- [ ] Media Upload Components
+- [ ] Navigation Components
+- [ ] Chart Components
+
+### 5. Accessibility Prüfung
+- [ ] Color Contrast (WCAG AA Standard)
+- [ ] Focus States sichtbar
+- [ ] Keyboard Navigation funktioniert
+- [ ] Screen Reader Labels vorhanden
+
+## FEHLERBEHANDLUNG
+
+### Fehler: Figma MCP nicht verfügbar
+```typescript
+if (!mcp.figma) {
+  console.error(`
+❌ Figma MCP Server nicht verfügbar!
+
+SETUP ANLEITUNG:
+1. Installiere Figma MCP Server:
+   npm install -g @figma/mcp-server
+
+2. Konfiguriere in Cursor:
+   Füge zu .cursor/mcp.json hinzu:
+   {
+     "mcpServers": {
+       "figma": {
+         "command": "figma-mcp-server",
+         "env": {
+           "FIGMA_ACCESS_TOKEN": "dein-token"
+         }
+       }
+     }
+   }
+
+3. Erstelle .env.local:
+   FIGMA_FILE_KEY=deine-file-key
+   FIGMA_ACCESS_TOKEN=dein-access-token
+
+4. Starte Cursor neu
+  `);
+  
+  return { success: false, error: 'Figma MCP nicht verfügbar' };
+}
+```
+
+### Fehler: Unvollständige Design-Tokens
+```typescript
+// Fülle fehlende Werte mit Tailwind-Defaults
+const defaults = {
+  colors: {
+    primary: {
+      500: '#3b82f6', // Tailwind blue-500
+      // ... weitere defaults
+    },
+  },
+  typography: {
+    fontFamily: {
+      sans: ['Inter', 'system-ui', 'sans-serif'],
+    },
+  },
+  // ... weitere defaults
+};
+
+// Merge mit Figma-Daten
+const finalTokens = {
+  ...defaults,
+  ...figmaDesign,
+  colors: { ...defaults.colors, ...figmaDesign.colors },
+  typography: { ...defaults.typography, ...figmaDesign.typography },
+};
+```
+
+### Fehler: Schreibrechte fehlen
+```typescript
+try {
+  fs.writeFileSync('tailwind.config.mjs', content);
+} catch (error) {
+  if (error.code === 'EACCES') {
+    console.error(`
+❌ Keine Schreibrechte!
+
+LÖSUNG:
+1. Schließe alle Editoren (VS Code, Cursor)
+2. Führe Command als Administrator aus
+3. Oder: Ändere Dateirechte:
+   icacls tailwind.config.mjs /grant Users:F
+    `);
+  }
+  throw error;
+}
+```
+
+## ROLLBACK-PROCEDURE
+
+Falls etwas schief geht:
+
+```bash
+# Finde neuestes Backup
+$latestBackup = Get-ChildItem -Filter "*.backup.*" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+# Restore Tailwind Config
+Copy-Item "tailwind.config.mjs.backup.$timestamp" "tailwind.config.mjs" -Force
+
+# Restore Globals CSS
+Copy-Item "src/app/globals.css.backup.$timestamp" "src/app/globals.css" -Force
+
+# Dev-Server neu starten
+npm run dev
+```
+
+## ENVIRONMENT VARIABLES
+
+Benötigte Umgebungsvariablen in `.env.local`:
+
+```env
+# Figma Integration
+FIGMA_FILE_KEY=your_figma_file_key_here
+FIGMA_ACCESS_TOKEN=your_figma_access_token_here
+
+# Optional: Figma File URL für Dokumentation
+FIGMA_FILE_URL=https://www.figma.com/file/xxxxx/YourDesign
+```
+
+## ERFOLGS-KRITERIEN
+
+Der Command ist erfolgreich wenn:
+
+- ✅ Keine TypeScript-Fehler in tailwind.config.mjs
+- ✅ Keine CSS-Syntax-Fehler in globals.css
+- ✅ Dev-Server startet ohne Fehler
+- ✅ Alle Components werden korrekt dargestellt
+- ✅ Farben entsprechen 1:1 Figma-Design
+- ✅ Typografie entspricht 1:1 Figma-Design
+- ✅ Spacing entspricht 1:1 Figma-Design
+- ✅ Responsive Breakpoints funktionieren
+- ✅ Backups wurden erstellt
+- ✅ Dokumentation wurde generiert
+
+---
+
+## NUTZUNG
+
+1. Stelle sicher, dass Figma MCP Server konfiguriert ist
+2. Setze FIGMA_FILE_KEY in .env.local
+3. Führe Command aus in Cursor: `Cmd+K` → "optimize-tailwind"
+4. Warte auf Bestätigung
+5. Prüfe Ergebnis visuell
+6. Bei Problemen: Nutze Backups für Rollback
+
+---

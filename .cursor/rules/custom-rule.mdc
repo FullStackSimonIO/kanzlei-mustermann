@@ -30,7 +30,7 @@ alwaysApply: true
 
 ## Block-Konvention
 
-- Jeder Block hat: `title`, `content (RichText)`, `media`, `cta (CMSLink)`
+- Jeder Block kann bestehen aus: `title`, `content (RichText)`, `media`, `cta (CMSLink)`, `tagline (ShadCN Badge)`
 - CMSLink enthält: `label`, `type`, `url`, `newTab`
 - Blöcke werden in der `Pages` Collection über das Feld `layout` eingefügt
 - RichText-Felder erhalten ShadCN Styling
