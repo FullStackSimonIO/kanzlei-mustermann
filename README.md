@@ -278,3 +278,5 @@ If you have any issues or questions, reach out to us on [Discord](https://discor
 # julian-videograph
 # cms-template
 # max-mustermann
+#   m a x - m u s t e r m a n n  
+ 
