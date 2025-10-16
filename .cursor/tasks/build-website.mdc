@@ -369,7 +369,7 @@ console.log('📊 Progress: 80% (4/5 Phasen)');
 
 #### Schritt 5.1: Hero-Komponenten bauen
 ```bash
-# Führe aus: build-heroes
+# Führe aus: `build-heroe`
 > Hero-Layouts aus Figma extrahiert
 > Verschiedene Hero-Varianten erstellt
 > Responsive Images konfiguriert
@@ -441,7 +441,7 @@ await clearContext({
 });
 
 console.log('🧹 Context geleert - Phase 5 abgeschlossen');
-console.log('📊 Progress: 100% (5/5 Phasen)');
+console.log('📊 Progress: 80% (5/6 Phasen)');
 ```
 
 ---
@@ -467,6 +467,51 @@ console.log('📊 Progress: 100% (5/5 Phasen)');
 ✅ Responsive für alle Breakpoints
 ✅ Performance-Optimierung (lazy loading, WebP)
 ✅ SEO-Optimierung (Schema.org, Meta-Tags)
+```
+
+**Validierung nach Schritt 5.1:**
+- [ ] Alle Hero-Varianten rendern korrekt
+- [ ] Bilder werden optimiert geladen (Next.js Image)
+- [ ] Responsive auf allen Devices
+- [ ] Text ist lesbar auf allen Hintergründen (Contrast Check)
+- [ ] CTA-Buttons funktionieren
+- [ ] Animationen performen gut (60fps)
+- [ ] SEO-Tags vorhanden (h1, meta description)
+
+**Performance-Test:**
+```typescript
+// Test Performance
+import { measurePerformance } from '@/lib/test-utils';
+
+const metrics = await measurePerformance(() => {
+  render(<Hero />);
+});
+
+console.log('Performance Metrics:');
+console.log(`- First Paint: ${metrics.firstPaint}ms`);
+console.log(`- Time to Interactive: ${metrics.tti}ms`);
+console.log(`- Largest Contentful Paint: ${metrics.lcp}ms`);
+
+// Validiere Performance-Budgets
+if (metrics.lcp > 2500) {
+  console.warn('⚠️ LCP zu hoch, optimiere Bilder');
+}
+
+if (metrics.tti > 3800) {
+  console.warn('⚠️ TTI zu hoch, optimiere JavaScript');
+}
+
+// Lighthouse Score
+const lighthouseScore = await runLighthouse();
+console.log(`Lighthouse Score: ${lighthouseScore.performance}/100`);
+
+if (lighthouseScore.performance < 90) {
+  console.warn('⚠️ Lighthouse Performance unter 90');
+}
+```
+
+console.log('🧹 Context geleert - Phase 5 abgeschlossen');
+console.log('📊 Progress: 100% (6/6 Phasen)');
 ```
 
 ---
