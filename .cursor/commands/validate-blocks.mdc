@@ -1,0 +1,692 @@
+---
+title: 'Validate All Blocks'
+description: 'Umfassende Validierung aller generierten Blocks: TypeScript, Build, Admin-Panel, Frontend-Rendering, Performance und Accessibility.'
+---
+
+## 🎯 Ziel
+Vollständige Validierung aller 1243+ generierten PayloadCMS Blocks nach allen Qualitätskriterien.
+
+---
+
+## 📋 VALIDIERUNGS-CHECKLISTE
+
+### ✅ Phase 1: Dateistruktur-Validierung
+
+```typescript
+// 1. Prüfe, ob alle erwarteten Dateien existieren
+const expectedCategories = [
+  'Layout', 'Header', 'Blog', 'CTA', 'MultistepForms', 'Testimonials',
+  'Events', 'Contact', 'Career', 'Gallery', 'Pricing', 'Portfolio',
+  'Navbar', 'Team', 'Timelines', 'Footer', 'Banners', 'Comparison',
+  'FAQ', 'PortfolioHeader', 'EventHeaderItems', 'EventHeaders',
+  'ContactModal', 'Logo', 'BlogPostHeader', 'Loader'
+]
+
+const expectedCounts = {
+  'Layout': 527,
+  'Header': 152,
+  'Blog': 68,
+  'CTA': 58,
+  'MultistepForms': 46,
+  'Testimonials': 43,
+  'Events': 37,
+  'Contact': 30,
+  'Career': 27,
+  'Gallery': 27,
+  'Pricing': 27,
+  'Portfolio': 23,
+  'Navbar': 22,
+  'Team': 22,
+  'Timelines': 21,
+  'Footer': 17,
+  'Banners': 16,
+  'Comparison': 15,
+  'FAQ': 14,
+  'PortfolioHeader': 12,
+  'EventHeaderItems': 11,
+  'EventHeaders': 6,
+  'ContactModal': 6,
+  'Logo': 6,
+  'BlogPostHeader': 5,
+  'Loader': 5,
+}
+
+console.log('📁 Validiere Dateistruktur...\n')
+
+let totalFiles = 0
+let missingFiles = []
+
+for (const category of expectedCategories) {
+  const categoryPath = `src/blocks/${category}`
+  
+  // Prüfe ob Kategorie existiert
+  if (!fs.existsSync(categoryPath)) {
+    console.error(`❌ Kategorie fehlt: ${category}`)
+    continue
+  }
+  
+  // Zähle Komponenten
+  const components = fs.readdirSync(categoryPath)
+  const actualCount = components.length
+  const expectedCount = expectedCounts[category]
+  
+  console.log(`📦 ${category}`)
+  console.log(`   Erwartet: ${expectedCount} Komponenten`)
+  console.log(`   Gefunden: ${actualCount} Komponenten`)
+  
+  if (actualCount < expectedCount) {
+    console.warn(`   ⚠️ ${expectedCount - actualCount} Komponenten fehlen`)
+  } else {
+    console.log(`   ✅ Vollständig`)
+  }
+  
+  // Prüfe jede Komponente
+  for (const component of components) {
+    const componentPath = `${categoryPath}/${component}`
+    
+    // Erwartete Dateien
+    const requiredFiles = [
+      'Component.tsx',
+      'config.ts',
+      'index.ts'
+    ]
+    
+    for (const file of requiredFiles) {
+      const filePath = `${componentPath}/${file}`
+      if (!fs.existsSync(filePath)) {
+        missingFiles.push(filePath)
+        console.error(`   ❌ Fehlt: ${filePath}`)
+      } else {
+        totalFiles++
+      }
+    }
+  }
+  
+  console.log()
+}
+
+console.log('📊 Dateistruktur-Zusammenfassung:')
+console.log(`   - Kategorien: ${expectedCategories.length}`)
+console.log(`   - Dateien: ${totalFiles}`)
+console.log(`   - Fehlende Dateien: ${missingFiles.length}`)
+
+if (missingFiles.length > 0) {
+  console.error(`\n❌ Validierung fehlgeschlagen: ${missingFiles.length} Dateien fehlen`)
+  process.exit(1)
+} else {
+  console.log('\n✅ Dateistruktur vollständig!')
+}
+```
+
+---
+
+### ✅ Phase 2: TypeScript-Validierung
+
+```bash
+echo "🔍 TypeScript-Validierung..."
+
+# Type Check
+npm run type-check
+
+if [ $? -eq 0 ]; then
+  echo "✅ Keine TypeScript-Fehler"
+else
+  echo "❌ TypeScript-Fehler gefunden"
+  echo ""
+  echo "Häufige Fehler und Lösungen:"
+  echo ""
+  echo "1. Property does not exist:"
+  echo "   → Payload Types regenerieren: npm run generate:types"
+  echo ""
+  echo "2. Cannot find module:"
+  echo "   → Prüfe Imports und Exports in src/blocks/index.ts"
+  echo ""
+  echo "3. Type mismatch:"
+  echo "   → Prüfe Block-Interfaces gegen payload-types.ts"
+  exit 1
+fi
+```
+
+**Detaillierte Type-Prüfung:**
+```typescript
+// Prüfe spezifische Type-Probleme
+import { glob } from 'glob'
+import ts from 'typescript'
+
+const configPath = ts.findConfigFile(
+  "./",
+  ts.sys.fileExists,
+  "tsconfig.json"
+)
+
+const { config } = ts.readConfigFile(configPath!, ts.sys.readFile)
+const { options, fileNames } = ts.parseJsonConfigFileContent(
+  config,
+  ts.sys,
+  "./"
+)
+
+const program = ts.createProgram(fileNames, options)
+const diagnostics = ts.getPreEmitDiagnostics(program)
+
+if (diagnostics.length > 0) {
+  console.log('\n⚠️ TypeScript-Warnungen gefunden:\n')
+  
+  // Gruppiere nach Datei
+  const byFile = diagnostics.reduce((acc, diagnostic) => {
+    const file = diagnostic.file?.fileName || 'unknown'
+    if (!acc[file]) acc[file] = []
+    acc[file].push(diagnostic)
+    return acc
+  }, {})
+  
+  // Ausgabe
+  for (const [file, fileDiagnostics] of Object.entries(byFile)) {
+    console.log(`📄 ${file}:`)
+    for (const diagnostic of fileDiagnostics) {
+      const message = ts.flattenDiagnosticMessageText(
+        diagnostic.messageText,
+        '\n'
+      )
+      console.log(`   - ${message}`)
+    }
+    console.log()
+  }
+}
+```
+
+---
+
+### ✅ Phase 3: Build-Validierung
+
+```bash
+echo "🏗️ Build-Validierung..."
+
+# Production Build
+npm run build
+
+if [ $? -eq 0 ]; then
+  echo "✅ Build erfolgreich"
+else
+  echo "❌ Build fehlgeschlagen"
+  exit 1
+fi
+
+# Bundle-Size Analysis
+echo ""
+echo "📦 Bundle-Größe analysieren..."
+
+npm run analyze 2>/dev/null || echo "⚠️ Analyze-Script nicht verfügbar"
+
+# Prüfe Build-Ausgabe
+BUILD_DIR=".next"
+
+if [ -d "$BUILD_DIR" ]; then
+  # Größe berechnen
+  BUILD_SIZE=$(du -sh "$BUILD_DIR" | cut -f1)
+  echo ""
+  echo "📊 Build-Metriken:"
+  echo "   - Build-Größe: $BUILD_SIZE"
+  
+  # Chunk-Größen
+  if [ -d "$BUILD_DIR/static/chunks" ]; then
+    CHUNK_COUNT=$(ls "$BUILD_DIR/static/chunks" | wc -l)
+    echo "   - Chunks: $CHUNK_COUNT"
+  fi
+  
+  # Pages
+  if [ -d "$BUILD_DIR/server/pages" ]; then
+    PAGE_COUNT=$(find "$BUILD_DIR/server/pages" -name "*.js" | wc -l)
+    echo "   - Pages: $PAGE_COUNT"
+  fi
+fi
+```
+
+**Performance-Budget Check:**
+```typescript
+// Prüfe Bundle-Größen gegen Limits
+const budgets = {
+  clientBundle: 500_000,    // 500KB
+  serverBundle: 2_000_000,  // 2MB
+  singleChunk: 100_000,     // 100KB
+}
+
+const buildStats = await analyzeBuild()
+
+console.log('\n📊 Performance-Budget:')
+
+// Client Bundle
+const clientSize = buildStats.client.size
+const clientOverBudget = clientSize > budgets.clientBundle
+console.log(`\n🌐 Client Bundle: ${formatBytes(clientSize)}`)
+console.log(`   Budget: ${formatBytes(budgets.clientBundle)}`)
+console.log(`   Status: ${clientOverBudget ? '❌ ÜBER Budget' : '✅ Im Budget'}`)
+
+if (clientOverBudget) {
+  console.log(`   Überschreitung: ${formatBytes(clientSize - budgets.clientBundle)}`)
+  console.log(`\n   💡 Optimierungen:`)
+  console.log(`      - Code-Splitting aktivieren`)
+  console.log(`      - Lazy-Loading für Blocks`)
+  console.log(`      - Tree-Shaking prüfen`)
+}
+
+// Server Bundle
+const serverSize = buildStats.server.size
+const serverOverBudget = serverSize > budgets.serverBundle
+console.log(`\n🖥️ Server Bundle: ${formatBytes(serverSize)}`)
+console.log(`   Budget: ${formatBytes(budgets.serverBundle)}`)
+console.log(`   Status: ${serverOverBudget ? '❌ ÜBER Budget' : '✅ Im Budget'}`)
+
+// Einzelne Chunks
+console.log(`\n📦 Größte Chunks:`)
+const largeChunks = buildStats.chunks
+  .sort((a, b) => b.size - a.size)
+  .slice(0, 10)
+
+for (const chunk of largeChunks) {
+  const overBudget = chunk.size > budgets.singleChunk
+  console.log(`   ${overBudget ? '⚠️' : '✅'} ${chunk.name}: ${formatBytes(chunk.size)}`)
+}
+```
+
+---
+
+### ✅ Phase 4: Admin-Panel Validierung
+
+```typescript
+// Starte Dev-Server für Tests
+console.log('🖥️ Admin-Panel-Validierung...\n')
+
+// 1. Prüfe Pages Collection Config
+const pagesConfig = await import('./src/collections/Pages/config')
+
+console.log('📋 Pages Collection:')
+console.log(`   - Slug: ${pagesConfig.Pages.slug}`)
+
+// Prüfe layout-Feld
+const layoutField = pagesConfig.Pages.fields.find(f => f.name === 'layout')
+
+if (!layoutField) {
+  console.error('❌ Layout-Feld nicht gefunden in Pages Collection')
+  process.exit(1)
+}
+
+if (layoutField.type !== 'blocks') {
+  console.error('❌ Layout-Feld ist kein blocks-Typ')
+  process.exit(1)
+}
+
+const registeredBlocks = layoutField.blocks || []
+console.log(`   - Registrierte Blocks: ${registeredBlocks.length}`)
+
+// Erwartete Anzahl: 1243+
+if (registeredBlocks.length < 1243) {
+  console.warn(`⚠️ Nur ${registeredBlocks.length} Blocks registriert (erwartet: 1243+)`)
+  console.warn(`   Fehlende Blocks: ~${1243 - registeredBlocks.length}`)
+} else {
+  console.log(`   ✅ Alle Blocks registriert`)
+}
+
+// 2. Prüfe Block-Gruppen
+const blockGroups = new Set()
+for (const block of registeredBlocks) {
+  if (block.admin?.group) {
+    blockGroups.add(block.admin.group)
+  }
+}
+
+console.log(`\n📦 Block-Gruppierung:`)
+console.log(`   - Gruppen: ${blockGroups.size}`)
+for (const group of Array.from(blockGroups).sort()) {
+  const count = registeredBlocks.filter(b => b.admin?.group === group).length
+  console.log(`     - ${group}: ${count} Blocks`)
+}
+
+// 3. Prüfe deutsche Labels
+console.log(`\n🇩🇪 Deutsche Labels:`)
+let germanLabels = 0
+let nonGermanLabels = []
+
+for (const block of registeredBlocks) {
+  const hasGermanLabel = 
+    block.labels?.singular && 
+    /[äöüÄÖÜß]/.test(block.labels.singular) ||
+    block.admin?.description &&
+    /[äöüÄÖÜß]/.test(block.admin.description)
+  
+  if (hasGermanLabel || 
+      (block.labels?.singular && block.labels.singular.length > 0)) {
+    germanLabels++
+  } else {
+    nonGermanLabels.push(block.slug)
+  }
+}
+
+console.log(`   - Deutsche Labels: ${germanLabels}/${registeredBlocks.length}`)
+if (nonGermanLabels.length > 0) {
+  console.warn(`   ⚠️ ${nonGermanLabels.length} Blocks ohne deutsche Labels`)
+  console.log(`   Betroffene Blocks: ${nonGermanLabels.slice(0, 5).join(', ')}...`)
+}
+
+// 4. Prüfe Block-Slugs
+console.log(`\n🔗 Block-Slugs:`)
+const slugPattern = /^[a-z][a-zA-Z0-9]*$/
+let validSlugs = 0
+let invalidSlugs = []
+
+for (const block of registeredBlocks) {
+  if (slugPattern.test(block.slug)) {
+    validSlugs++
+  } else {
+    invalidSlugs.push(block.slug)
+  }
+}
+
+console.log(`   - Valide Slugs: ${validSlugs}/${registeredBlocks.length}`)
+if (invalidSlugs.length > 0) {
+  console.error(`   ❌ ${invalidSlugs.length} ungültige Slugs`)
+  console.log(`   Ungültig: ${invalidSlugs.slice(0, 5).join(', ')}...`)
+}
+
+console.log(`\n✅ Admin-Panel Validierung abgeschlossen!`)
+```
+
+---
+
+### ✅ Phase 5: Frontend-Rendering Validierung
+
+```typescript
+// Teste Rendering aller Blocks
+console.log('🎨 Frontend-Rendering-Validierung...\n')
+
+const { blockComponents } = await import('./src/components/PageRenderer')
+
+console.log(`📦 Registrierte Komponenten: ${Object.keys(blockComponents).length}`)
+
+// Sample-Test (10% der Blocks)
+const allBlockTypes = Object.keys(blockComponents)
+const sampleSize = Math.floor(allBlockTypes.length * 0.1)
+const sampleBlocks = allBlockTypes
+  .sort(() => Math.random() - 0.5)
+  .slice(0, sampleSize)
+
+console.log(`🧪 Teste ${sampleSize} zufällige Blocks...\n`)
+
+let successCount = 0
+let failureCount = 0
+const failures = []
+
+for (const blockType of sampleBlocks) {
+  try {
+    const Component = blockComponents[blockType]
+    
+    if (!Component) {
+      throw new Error('Component not found')
+    }
+    
+    // Mock-Daten
+    const mockBlock = {
+      blockType,
+      title: 'Test Titel',
+      description: 'Test Beschreibung',
+      content: { root: { children: [] } },
+    }
+    
+    // Teste Rendering (ohne tatsächliches DOM)
+    const result = Component({ block: mockBlock })
+    
+    if (result) {
+      successCount++
+      console.log(`   ✅ ${blockType}`)
+    } else {
+      throw new Error('Component returned null')
+    }
+  } catch (error) {
+    failureCount++
+    failures.push({ blockType, error: error.message })
+    console.error(`   ❌ ${blockType}: ${error.message}`)
+  }
+}
+
+console.log(`\n📊 Rendering-Ergebnisse:`)
+console.log(`   - Erfolgreich: ${successCount}/${sampleSize}`)
+console.log(`   - Fehlgeschlagen: ${failureCount}/${sampleSize}`)
+console.log(`   - Erfolgsrate: ${((successCount / sampleSize) * 100).toFixed(1)}%`)
+
+if (failureCount > 0) {
+  console.warn(`\n⚠️ ${failureCount} Blocks haben Rendering-Probleme`)
+  console.log(`\nBetroffene Blocks:`)
+  for (const { blockType, error } of failures) {
+    console.log(`   - ${blockType}: ${error}`)
+  }
+}
+```
+
+---
+
+### ✅ Phase 6: Performance-Validierung
+
+```bash
+echo "⚡ Performance-Validierung..."
+echo ""
+
+# Lighthouse CI (falls installiert)
+if command -v lhci &> /dev/null; then
+  echo "🔍 Lighthouse-Audit..."
+  lhci autorun || echo "⚠️ Lighthouse-Audit fehlgeschlagen"
+else
+  echo "⚠️ Lighthouse CI nicht installiert"
+  echo "   Installation: npm install -g @lhci/cli"
+fi
+```
+
+**Performance-Metriken:**
+```typescript
+// Performance-Benchmarks
+console.log('\n⚡ Performance-Benchmarks:\n')
+
+const benchmarks = {
+  // Ziel-Metriken (Core Web Vitals)
+  targets: {
+    LCP: 2500,   // Largest Contentful Paint (ms)
+    FID: 100,    // First Input Delay (ms)
+    CLS: 0.1,    // Cumulative Layout Shift
+    TTI: 3800,   // Time to Interactive (ms)
+    FCP: 1800,   // First Contentful Paint (ms)
+  },
+}
+
+// Simuliere Performance-Messung
+const metrics = await measurePerformance()
+
+console.log('📊 Core Web Vitals:')
+console.log(`   - LCP: ${metrics.LCP}ms ${metrics.LCP <= benchmarks.targets.LCP ? '✅' : '❌'}`)
+console.log(`   - FID: ${metrics.FID}ms ${metrics.FID <= benchmarks.targets.FID ? '✅' : '❌'}`)
+console.log(`   - CLS: ${metrics.CLS.toFixed(3)} ${metrics.CLS <= benchmarks.targets.CLS ? '✅' : '❌'}`)
+console.log(`   - TTI: ${metrics.TTI}ms ${metrics.TTI <= benchmarks.targets.TTI ? '✅' : '❌'}`)
+console.log(`   - FCP: ${metrics.FCP}ms ${metrics.FCP <= benchmarks.targets.FCP ? '✅' : '❌'}`)
+
+// Lighthouse Score
+if (metrics.lighthouseScore) {
+  console.log(`\n💡 Lighthouse Score: ${metrics.lighthouseScore}/100`)
+  
+  if (metrics.lighthouseScore >= 90) {
+    console.log('   ✅ Excellent Performance')
+  } else if (metrics.lighthouseScore >= 50) {
+    console.warn('   ⚠️ Needs Improvement')
+  } else {
+    console.error('   ❌ Poor Performance')
+  }
+}
+```
+
+---
+
+### ✅ Phase 7: Accessibility-Validierung
+
+```typescript
+// Accessibility-Audit
+console.log('\n♿ Accessibility-Validierung...\n')
+
+// axe-core (falls vorhanden)
+if (typeof axe !== 'undefined') {
+  const results = await axe.run()
+  
+  console.log(`📋 Accessibility-Audit:`)
+  console.log(`   - Tests: ${results.passes.length + results.violations.length}`)
+  console.log(`   - Passed: ${results.passes.length}`)
+  console.log(`   - Violations: ${results.violations.length}`)
+  
+  if (results.violations.length > 0) {
+    console.warn(`\n⚠️ ${results.violations.length} Accessibility-Probleme:\n`)
+    
+    for (const violation of results.violations) {
+      console.log(`   🔴 ${violation.description}`)
+      console.log(`      Impact: ${violation.impact}`)
+      console.log(`      Betroffene Elemente: ${violation.nodes.length}`)
+      console.log(`      Hilfe: ${violation.helpUrl}`)
+      console.log()
+    }
+  } else {
+    console.log(`\n✅ Keine Accessibility-Probleme gefunden!`)
+  }
+} else {
+  console.warn('⚠️ axe-core nicht verfügbar')
+  console.log('   Installation: npm install axe-core')
+}
+
+// Manuelle Checks
+console.log('\n📋 Manuelle Accessibility-Checks:')
+console.log('   - [ ] Keyboard-Navigation funktioniert')
+console.log('   - [ ] Screen-Reader Support')
+console.log('   - [ ] ARIA-Labels vorhanden')
+console.log('   - [ ] Contrast-Ratios erfüllt (WCAG AA)')
+console.log('   - [ ] Focus-States sichtbar')
+console.log('   - [ ] Alt-Texte für Bilder')
+```
+
+---
+
+## 📊 GESAMT-VALIDIERUNGSBERICHT
+
+```typescript
+// Generiere finalen Bericht
+const report = {
+  timestamp: new Date().toISOString(),
+  
+  // Phase-Ergebnisse
+  phases: {
+    fileStructure: {
+      status: missingFiles.length === 0 ? 'passed' : 'failed',
+      totalFiles,
+      missingFiles: missingFiles.length,
+    },
+    
+    typescript: {
+      status: diagnostics.length === 0 ? 'passed' : 'warning',
+      errors: diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error).length,
+      warnings: diagnostics.filter(d => d.category === ts.DiagnosticCategory.Warning).length,
+    },
+    
+    build: {
+      status: buildSuccess ? 'passed' : 'failed',
+      buildSize: BUILD_SIZE,
+      chunkCount: CHUNK_COUNT,
+    },
+    
+    adminPanel: {
+      status: registeredBlocks.length >= 1243 ? 'passed' : 'warning',
+      registeredBlocks: registeredBlocks.length,
+      groups: blockGroups.size,
+      germanLabels: germanLabels,
+    },
+    
+    rendering: {
+      status: (successCount / sampleSize) >= 0.95 ? 'passed' : 'failed',
+      tested: sampleSize,
+      successful: successCount,
+      failed: failureCount,
+    },
+    
+    performance: {
+      status: metrics.lighthouseScore >= 90 ? 'passed' : 'warning',
+      lighthouseScore: metrics.lighthouseScore,
+      coreWebVitals: metrics,
+    },
+    
+    accessibility: {
+      status: results.violations.length === 0 ? 'passed' : 'warning',
+      violations: results.violations.length,
+      passes: results.passes.length,
+    },
+  },
+  
+  // Gesamt-Status
+  overallStatus: calculateOverallStatus(),
+}
+
+// Ausgabe
+console.log('\n' + '='.repeat(80))
+console.log('📊 VALIDIERUNGSBERICHT')
+console.log('='.repeat(80))
+console.log(`\nZeitstempel: ${report.timestamp}`)
+console.log(`\nGesamt-Status: ${report.overallStatus === 'passed' ? '✅ BESTANDEN' : '❌ FEHLGESCHLAGEN'}`)
+
+console.log('\n📋 Phase-Details:\n')
+
+for (const [phase, result] of Object.entries(report.phases)) {
+  const icon = result.status === 'passed' ? '✅' : result.status === 'warning' ? '⚠️' : '❌'
+  console.log(`${icon} ${phase.toUpperCase()}: ${result.status}`)
+  
+  // Details
+  for (const [key, value] of Object.entries(result)) {
+    if (key !== 'status') {
+      console.log(`   - ${key}: ${JSON.stringify(value)}`)
+    }
+  }
+  console.log()
+}
+
+// Speichere Bericht
+await fs.writeFile(
+  'VALIDATION_REPORT.json',
+  JSON.stringify(report, null, 2)
+)
+
+console.log('💾 Bericht gespeichert: VALIDATION_REPORT.json')
+
+// Markdown-Bericht
+const markdown = generateMarkdownReport(report)
+await fs.writeFile('VALIDATION_REPORT.md', markdown)
+console.log('💾 Bericht gespeichert: VALIDATION_REPORT.md')
+
+console.log('\n' + '='.repeat(80))
+
+// Exit Code
+process.exit(report.overallStatus === 'passed' ? 0 : 1)
+```
+
+---
+
+## 🚀 Verwendung
+
+**Führe vollständige Validierung aus:**
+```bash
+cursor> Validate All Blocks
+```
+
+**Oder einzelne Phasen:**
+```bash
+# Nur TypeScript
+npm run type-check
+
+# Nur Build
+npm run build
+
+# Nur Performance
+npm run lighthouse
+```
+
+---
+
+✅ **Umfassende Validierung aller 1243+ Blocks nach höchsten Qualitätsstandards!**

@@ -1,0 +1,916 @@
+---
+title: 'Generate Heroes from Figma Inventory'
+description: 'Generiert Hero-Sections aus Figma mit conditional Fields basierend auf Hero-Typ.'
+---
+
+## 🎯 Ziel
+Generiere Hero-Sections unter `/src/heros/` mit intelligenten conditional Fields, die je nach ausgewähltem Hero-Typ unterschiedliche Felder anzeigen.
+
+---
+
+## 📋 Voraussetzungen
+
+```bash
+# 1. Figma Inventory muss existieren
+> Fetch Used Figma Components
+
+# 2. Prüfe Hero-Komponenten
+cat FIGMA_INVENTORY.json | grep -A 5 '"category": "Hero"'
+```
+
+---
+
+## 🏗️ Hero-Generierungs-Workflow
+
+### Phase 1: Hero-Inventar laden
+
+```typescript
+// 1. Lade Figma Inventory und filtere Heroes
+const inventory = JSON.parse(
+  await fs.readFile('FIGMA_INVENTORY.json', 'utf-8')
+)
+
+const heroComponents = inventory.relumeMapping.filter(
+  mapping => mapping.category === 'Hero'
+)
+
+console.log('🦸 Hero-Komponenten gefunden:')
+console.log(`   - Gesamt: ${heroComponents.length}`)
+
+// Analysiere Hero-Strukturen
+const heroAnalysis = []
+
+for (const heroMapping of heroComponents) {
+  // Lade Figma-Komponente für Detail-Analyse
+  const figmaDetails = await mcp.getFigmaNode({
+    fileKey: FIGMA_FILE_KEY,
+    nodeId: heroMapping.figma.id,
+  })
+  
+  // Analysiere Struktur
+  const structure = analyzeHeroStructure(figmaDetails)
+  
+  heroAnalysis.push({
+    name: heroMapping.figma.name,
+    figmaId: heroMapping.figma.id,
+    relumeTemplate: heroMapping.relume,
+    structure: structure,
+  })
+  
+  console.log(`\n📦 ${heroMapping.figma.name}:`)
+  console.log(`   - Bilder: ${structure.images.length}`)
+  console.log(`   - Text-Elemente: ${structure.texts.length}`)
+  console.log(`   - Buttons: ${structure.buttons.length}`)
+  console.log(`   - Input-Felder: ${structure.inputs.length}`)
+  console.log(`   - Listen: ${structure.lists.length}`)
+}
+```
+
+---
+
+### Phase 2: Hero-Typen definieren
+
+```typescript
+// 2. Definiere Hero-Typen basierend auf Struktur
+function categorizeHeroType(structure) {
+  // Typ-Erkennung basierend auf Elementen
+  if (structure.inputs.length > 0) {
+    return 'heroWithForm'
+  }
+  if (structure.images.length > 3) {
+    return 'heroWithGallery'
+  }
+  if (structure.images.length === 2) {
+    return 'heroSplitScreen'
+  }
+  if (structure.lists.length > 0) {
+    return 'heroWithFeatures'
+  }
+  if (structure.videos.length > 0) {
+    return 'heroWithVideo'
+  }
+  if (structure.images.length === 1) {
+    return 'heroWithImage'
+  }
+  return 'heroSimple'
+}
+
+// Erstelle Hero-Definitionen
+const heroDefinitions = heroAnalysis.map(hero => {
+  const heroType = categorizeHeroType(hero.structure)
+  
+  return {
+    name: hero.name,
+    slug: generateSlug(hero.name), // z.B. "Header1", "Header2"
+    type: heroType,
+    structure: hero.structure,
+    relumeTemplate: hero.relumeTemplate,
+  }
+})
+
+console.log('\n📊 Hero-Typen:')
+const typeCount = heroDefinitions.reduce((acc, hero) => {
+  acc[hero.type] = (acc[hero.type] || 0) + 1
+  return acc
+}, {})
+
+for (const [type, count] of Object.entries(typeCount)) {
+  console.log(`   - ${type}: ${count}`)
+}
+```
+
+---
+
+### Phase 3: Heroes generieren
+
+```typescript
+// 3. Generiere Hero-Komponenten unter /src/heros/
+for (const heroDef of heroDefinitions) {
+  const heroPath = `src/heros/${heroDef.slug}`
+  
+  await fs.mkdir(heroPath, { recursive: true })
+  
+  console.log(`\n🏗️ Generiere ${heroDef.slug}...`)
+  
+  // 3.1 Generiere index.tsx
+  const componentCode = generateHeroComponent(heroDef)
+  await fs.writeFile(`${heroPath}/index.tsx`, componentCode)
+  
+  console.log(`   ✅ ${heroPath}/index.tsx`)
+}
+
+// Beispiel generierte Komponente
+function generateHeroComponent(heroDef) {
+  return `import React from 'react'
+import { RichText } from '@/components/RichText'
+import { Media } from '@/components/Media'
+import { CMSLink } from '@/components/CMSLink'
+import type { Hero as HeroType } from '@/payload-types'
+
+interface ${heroDef.slug}Props {
+  hero: HeroType
+}
+
+export const ${heroDef.slug}: React.FC<${heroDef.slug}Props> = ({ hero }) => {
+  const { 
+    title, 
+    description, 
+    richText,
+    ${heroDef.structure.images.length > 0 ? 'media,' : ''}
+    ${heroDef.structure.images.length > 1 ? 'mediaGallery,' : ''}
+    ${heroDef.structure.buttons.length > 0 ? 'primaryCTA, secondaryCTA,' : ''}
+    ${heroDef.structure.lists.length > 0 ? 'features,' : ''}
+    ${heroDef.structure.inputs.length > 0 ? 'showForm,' : ''}
+  } = hero || {}
+  
+  return (
+    <section className="relative py-20 md:py-32">
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 ${heroDef.structure.images.length === 1 ? 'md:grid-cols-2' : ''} gap-12 items-center">
+          
+          {/* Text-Bereich */}
+          <div className="space-y-6">
+            {title && (
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
+                {title}
+              </h1>
+            )}
+            
+            ${heroDef.structure.texts.length > 1 ? `
+            {description && (
+              <p className="text-xl text-muted-foreground">
+                {description}
+              </p>
+            )}
+            ` : ''}
+            
+            {richText && (
+              <div className="prose prose-lg">
+                <RichText content={richText} />
+              </div>
+            )}
+            
+            ${heroDef.structure.lists.length > 0 ? `
+            {/* Feature-Liste */}
+            {features && features.length > 0 && (
+              <ul className="space-y-3">
+                {features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <svg className="w-6 h-6 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>{feature.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            ` : ''}
+            
+            ${heroDef.structure.buttons.length > 0 ? `
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-4">
+              {primaryCTA && <CMSLink {...primaryCTA} variant="default" size="lg" />}
+              {secondaryCTA && <CMSLink {...secondaryCTA} variant="outline" size="lg" />}
+            </div>
+            ` : ''}
+            
+            ${heroDef.structure.inputs.length > 0 ? `
+            {/* Form */}
+            {showForm && (
+              <form className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="Deine E-Mail-Adresse"
+                  className="flex-1 px-4 py-3 rounded-lg border border-input bg-background"
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:bg-primary/90"
+                >
+                  Absenden
+                </button>
+              </form>
+            )}
+            ` : ''}
+          </div>
+          
+          ${heroDef.structure.images.length === 1 ? `
+          {/* Einzelnes Bild */}
+          {media && (
+            <div className="relative">
+              <Media 
+                resource={media} 
+                className="rounded-2xl shadow-2xl"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            </div>
+          )}
+          ` : ''}
+          
+          ${heroDef.structure.images.length > 1 ? `
+          {/* Galerie */}
+          {mediaGallery && mediaGallery.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {mediaGallery.map((item, idx) => (
+                <Media 
+                  key={idx}
+                  resource={item.image} 
+                  className="rounded-lg shadow-lg"
+                />
+              ))}
+            </div>
+          )}
+          ` : ''}
+          
+        </div>
+      </div>
+    </section>
+  )
+}
+`
+}
+```
+
+---
+
+### Phase 4: Zentrale Hero-Config mit Conditional Fields
+
+```typescript
+// 4. Generiere zentrale Hero-Config in src/heros/config.ts
+const heroConfigCode = `
+import { Field } from 'payload/types'
+
+export const heroField: Field = {
+  name: 'hero',
+  type: 'group',
+  label: 'Hero Section',
+  admin: {
+    description: 'Wähle einen Hero-Typ und konfiguriere die Inhalte',
+  },
+  fields: [
+    // Hero-Typ Auswahl
+    {
+      name: 'type',
+      type: 'select',
+      label: 'Hero-Typ',
+      required: true,
+      defaultValue: 'none',
+      admin: {
+        description: 'Wähle den Hero-Typ für diese Seite',
+      },
+      options: [
+        { label: 'Kein Hero', value: 'none' },
+        ${heroDefinitions.map(hero => `
+        { 
+          label: '${hero.name}', 
+          value: '${hero.slug}' 
+        },`).join('')}
+      ],
+    },
+    
+    // ===== GEMEINSAME FELDER (immer sichtbar) =====
+    {
+      name: 'title',
+      type: 'text',
+      label: 'Titel',
+      required: true,
+      admin: {
+        description: 'Hauptüberschrift des Heroes',
+        condition: (data) => data?.hero?.type && data.hero.type !== 'none',
+      },
+    },
+    
+    // ===== CONDITIONAL FELDER PRO HERO-TYP =====
+    ${generateConditionalFields(heroDefinitions)}
+  ],
+}
+
+// Helper: RichText-Feld
+function richTextField(heroTypes: string[]) {
+  return {
+    name: 'richText',
+    type: 'richText',
+    label: 'Inhalt',
+    admin: {
+      description: 'Formatierter Text-Inhalt',
+      condition: (data) => heroTypes.includes(data?.hero?.type),
+    },
+  }
+}
+
+// Helper: Media-Feld
+function mediaField(heroTypes: string[], fieldName = 'media', label = 'Bild') {
+  return {
+    name: fieldName,
+    type: 'upload',
+    relationTo: 'media',
+    label: label,
+    admin: {
+      description: \`\${label} für den Hero\`,
+      condition: (data) => heroTypes.includes(data?.hero?.type),
+    },
+  }
+}
+
+// Helper: CTA-Feld
+function ctaField(heroTypes: string[], fieldName = 'primaryCTA', label = 'Haupt-Button') {
+  return {
+    name: fieldName,
+    type: 'group',
+    label: label,
+    admin: {
+      condition: (data) => heroTypes.includes(data?.hero?.type),
+    },
+    fields: [
+      {
+        name: 'label',
+        type: 'text',
+        label: 'Button-Text',
+        required: true,
+      },
+      {
+        name: 'url',
+        type: 'text',
+        label: 'URL',
+      },
+      {
+        name: 'type',
+        type: 'select',
+        label: 'Link-Typ',
+        options: [
+          { label: 'Interner Link', value: 'internal' },
+          { label: 'Externer Link', value: 'external' },
+        ],
+        defaultValue: 'internal',
+      },
+      {
+        name: 'newTab',
+        type: 'checkbox',
+        label: 'In neuem Tab öffnen',
+        defaultValue: false,
+      },
+    ],
+  }
+}
+`
+
+// Generiere conditional Fields
+function generateConditionalFields(heroDefinitions) {
+  const fieldsByType = {
+    // Einfacher Hero: nur Titel + Beschreibung
+    heroSimple: ['description'],
+    
+    // Hero mit Bild: + 1 Bild
+    heroWithImage: ['description', 'media', 'primaryCTA', 'secondaryCTA'],
+    
+    // Hero mit Gallery: + mehrere Bilder
+    heroWithGallery: ['description', 'mediaGallery', 'primaryCTA'],
+    
+    // Hero mit Features: + Feature-Liste
+    heroWithFeatures: ['description', 'features', 'media', 'primaryCTA'],
+    
+    // Hero mit Form: + Form-Elemente
+    heroWithForm: ['description', 'media', 'showForm', 'formHeading'],
+    
+    // Hero mit Video: + Video
+    heroWithVideo: ['description', 'video', 'posterImage', 'primaryCTA'],
+    
+    // Split-Screen Hero: + 2 Bilder
+    heroSplitScreen: ['description', 'leftMedia', 'rightMedia', 'primaryCTA'],
+  }
+  
+  let fieldsCode = ''
+  
+  // Description (für fast alle)
+  const heroTypesWithDescription = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('description'))
+    .map(h => `'${h.slug}'`)
+  
+  fieldsCode += `
+    // Beschreibung
+    {
+      name: 'description',
+      type: 'textarea',
+      label: 'Beschreibung',
+      admin: {
+        description: 'Kurze Beschreibung unter dem Titel',
+        condition: (data) => [${heroTypesWithDescription.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+  `
+  
+  // RichText (optional für einige)
+  const heroTypesWithRichText = heroDefinitions
+    .filter(h => h.structure.texts.length > 2)
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithRichText.length > 0) {
+    fieldsCode += `
+    // Rich Text
+    {
+      name: 'richText',
+      type: 'richText',
+      label: 'Detaillierter Inhalt',
+      admin: {
+        description: 'Formatierter Text (optional)',
+        condition: (data) => [${heroTypesWithRichText.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+    `
+  }
+  
+  // Single Media
+  const heroTypesWithMedia = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('media'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithMedia.length > 0) {
+    fieldsCode += `
+    // Einzelnes Bild
+    {
+      name: 'media',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Bild',
+      admin: {
+        description: 'Haupt-Bild für den Hero',
+        condition: (data) => [${heroTypesWithMedia.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+    `
+  }
+  
+  // Media Gallery
+  const heroTypesWithGallery = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('mediaGallery'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithGallery.length > 0) {
+    fieldsCode += `
+    // Bild-Galerie
+    {
+      name: 'mediaGallery',
+      type: 'array',
+      label: 'Bilder',
+      admin: {
+        description: 'Mehrere Bilder für die Galerie',
+        condition: (data) => [${heroTypesWithGallery.join(', ')}].includes(data?.hero?.type),
+      },
+      fields: [
+        {
+          name: 'image',
+          type: 'upload',
+          relationTo: 'media',
+          label: 'Bild',
+          required: true,
+        },
+      ],
+    },
+    `
+  }
+  
+  // Features List
+  const heroTypesWithFeatures = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('features'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithFeatures.length > 0) {
+    fieldsCode += `
+    // Feature-Liste
+    {
+      name: 'features',
+      type: 'array',
+      label: 'Features',
+      admin: {
+        description: 'Liste von Features oder Stichpunkten',
+        condition: (data) => [${heroTypesWithFeatures.join(', ')}].includes(data?.hero?.type),
+      },
+      fields: [
+        {
+          name: 'text',
+          type: 'text',
+          label: 'Feature-Text',
+          required: true,
+        },
+        {
+          name: 'icon',
+          type: 'upload',
+          relationTo: 'media',
+          label: 'Icon (optional)',
+        },
+      ],
+    },
+    `
+  }
+  
+  // Form Fields
+  const heroTypesWithForm = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('showForm'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithForm.length > 0) {
+    fieldsCode += `
+    // Formular
+    {
+      name: 'showForm',
+      type: 'checkbox',
+      label: 'Formular anzeigen',
+      defaultValue: true,
+      admin: {
+        condition: (data) => [${heroTypesWithForm.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+    {
+      name: 'formHeading',
+      type: 'text',
+      label: 'Formular-Überschrift',
+      admin: {
+        description: 'Überschrift über dem Formular',
+        condition: (data) => 
+          [${heroTypesWithForm.join(', ')}].includes(data?.hero?.type) && 
+          data?.hero?.showForm === true,
+      },
+    },
+    `
+  }
+  
+  // Video
+  const heroTypesWithVideo = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('video'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithVideo.length > 0) {
+    fieldsCode += `
+    // Video
+    {
+      name: 'video',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Video',
+      admin: {
+        description: 'Video-Datei für den Hero',
+        condition: (data) => [${heroTypesWithVideo.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+    {
+      name: 'posterImage',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Video-Vorschaubild',
+      admin: {
+        description: 'Thumbnail, das angezeigt wird bevor Video abspielt',
+        condition: (data) => [${heroTypesWithVideo.join(', ')}].includes(data?.hero?.type),
+      },
+    },
+    `
+  }
+  
+  // Primary CTA
+  const heroTypesWithPrimaryCTA = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('primaryCTA'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithPrimaryCTA.length > 0) {
+    fieldsCode += `
+    // Haupt-Button
+    {
+      name: 'primaryCTA',
+      type: 'group',
+      label: 'Haupt-Button',
+      admin: {
+        condition: (data) => [${heroTypesWithPrimaryCTA.join(', ')}].includes(data?.hero?.type),
+      },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          label: 'Button-Text',
+          required: true,
+        },
+        {
+          name: 'url',
+          type: 'text',
+          label: 'URL',
+        },
+        {
+          name: 'newTab',
+          type: 'checkbox',
+          label: 'In neuem Tab öffnen',
+          defaultValue: false,
+        },
+      ],
+    },
+    `
+  }
+  
+  // Secondary CTA
+  const heroTypesWithSecondaryCTA = heroDefinitions
+    .filter(h => fieldsByType[h.type]?.includes('secondaryCTA'))
+    .map(h => `'${h.slug}'`)
+  
+  if (heroTypesWithSecondaryCTA.length > 0) {
+    fieldsCode += `
+    // Zweiter Button
+    {
+      name: 'secondaryCTA',
+      type: 'group',
+      label: 'Zweiter Button (optional)',
+      admin: {
+        condition: (data) => [${heroTypesWithSecondaryCTA.join(', ')}].includes(data?.hero?.type),
+      },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          label: 'Button-Text',
+        },
+        {
+          name: 'url',
+          type: 'text',
+          label: 'URL',
+        },
+      ],
+    },
+    `
+  }
+  
+  return fieldsCode
+}
+
+await fs.writeFile('src/heros/config.ts', heroConfigCode)
+console.log('\n✅ Hero-Config erstellt: src/heros/config.ts')
+```
+
+---
+
+### Phase 5: RenderHero.tsx aktualisieren
+
+```typescript
+// 5. Generiere/Update RenderHero.tsx
+const renderHeroCode = `
+import React from 'react'
+import type { Hero } from '@/payload-types'
+
+// Importiere alle generierten Heroes
+${heroDefinitions.map(hero => 
+  `import { ${hero.slug} } from './${hero.slug}'`
+).join('\n')}
+
+interface RenderHeroProps {
+  hero: Hero
+}
+
+export const RenderHero: React.FC<RenderHeroProps> = ({ hero }) => {
+  const { type } = hero || {}
+  
+  if (!type || type === 'none') {
+    return null
+  }
+  
+  // Mapping von Hero-Typ zu Komponente
+  const heroComponents = {
+${heroDefinitions.map(hero => 
+    `    '${hero.slug}': ${hero.slug},`
+).join('\n')}
+  }
+  
+  const HeroComponent = heroComponents[type]
+  
+  if (!HeroComponent) {
+    console.warn(\`Hero type "\${type}" not found\`)
+    return null
+  }
+  
+  return <HeroComponent hero={hero} />
+}
+`
+
+await fs.writeFile('src/heros/RenderHero.tsx', renderHeroCode)
+console.log('✅ RenderHero.tsx aktualisiert')
+```
+
+---
+
+### Phase 6: Integration in Pages Collection
+
+```typescript
+// 6. Update Pages Collection
+const pagesConfigPath = 'src/collections/Pages/config.ts'
+const pagesConfig = await fs.readFile(pagesConfigPath, 'utf-8')
+
+// Füge Hero-Import hinzu
+const heroImport = `import { heroField } from '@/heros/config'\n`
+
+// Füge Hero-Feld zur Pages Collection hinzu
+const updatedPagesConfig = pagesConfig
+  .replace(
+    /import.*from.*\n/g,
+    match => match + (match.includes('heros/config') ? '' : heroImport)
+  )
+  .replace(
+    /fields:\s*\[/,
+    `fields: [
+    // Hero Section (conditional fields)
+    heroField,
+    `
+  )
+
+await fs.writeFile(pagesConfigPath, updatedPagesConfig)
+console.log('✅ Pages Collection aktualisiert mit Hero-Feld')
+```
+
+---
+
+## 🎉 Erfolgsmeldung
+
+```typescript
+console.log('\n' + '='.repeat(80))
+console.log('🦸 HERO-GENERIERUNG ABGESCHLOSSEN!')
+console.log('='.repeat(80))
+console.log(`
+📊 Zusammenfassung:
+   ✅ ${heroDefinitions.length} Hero-Komponenten generiert
+   ✅ Conditional Fields konfiguriert
+   ✅ RenderHero.tsx aktualisiert
+   ✅ Pages Collection integriert
+
+📁 Generierte Dateien:
+${heroDefinitions.map(h => `   - src/heros/${h.slug}/index.tsx`).join('\n')}
+   - src/heros/config.ts (mit conditional fields)
+   - src/heros/RenderHero.tsx
+
+🎯 Hero-Typen erkannt:
+${Object.entries(typeCount).map(([type, count]) => 
+  `   - ${type}: ${count} Variante(n)`
+).join('\n')}
+
+✅ Im Admin-Panel:
+   Pages → Hero Section → Typ auswählen
+   → Felder werden dynamisch basierend auf Auswahl geladen!
+
+💡 Beispiel:
+   - Wähle "Header1" → Zeigt: Titel, Beschreibung, Bild, 2 Buttons
+   - Wähle "Header2" → Zeigt: Titel, Beschreibung, Galerie, 1 Button
+   - Wähle "Header3" → Zeigt: Titel, Features-Liste, Formular
+
+🚀 Nächste Schritte:
+   1. npm run type-check
+   2. npm run dev
+   3. Öffne http://localhost:3000/admin/collections/pages
+   4. Teste Hero-Auswahl mit conditional fields!
+`)
+console.log('='.repeat(80))
+```
+
+---
+
+## 🎨 Admin-Panel Vorschau
+
+### Hero-Typ Auswahl
+```
+Pages → Neue Page
+
+┌─────────────────────────────────────┐
+│ Hero Section                        │
+├─────────────────────────────────────┤
+│                                     │
+│ Hero-Typ: [Dropdown ▼]             │
+│  ├─ Kein Hero                       │
+│  ├─ Header1 - Hero mit Bild         │ ← Auswahl!
+│  ├─ Header2 - Hero mit Galerie      │
+│  ├─ Header3 - Hero mit Features     │
+│  └─ Header4 - Hero mit Formular     │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+### Nach Auswahl "Header1" → Conditional Fields erscheinen
+```
+┌─────────────────────────────────────┐
+│ Hero Section                        │
+├─────────────────────────────────────┤
+│                                     │
+│ Hero-Typ: Header1 ✓                 │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Titel *                         │ │
+│ │ [Willkommen...]                 │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Beschreibung                    │ │
+│ │ [Ihre Beschreibung...]          │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Bild                            │ │
+│ │ [Bild hochladen/auswählen...]   │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Haupt-Button                    │ │
+│ │  Button-Text: [Mehr erfahren]   │ │
+│ │  URL: [/kontakt]                │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Zweiter Button                  │ │
+│ │  Button-Text: [Preise ansehen]  │ │
+│ │  URL: [/preise]                 │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+### Nach Auswahl "Header3" → Andere Fields!
+```
+┌─────────────────────────────────────┐
+│ Hero Section                        │
+├─────────────────────────────────────┤
+│                                     │
+│ Hero-Typ: Header3 ✓                 │
+│                                     │
+│ Titel *                             │
+│ Beschreibung                        │
+│ Bild                                │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Features                        │ │ ← NEU!
+│ │  [+ Feature hinzufügen]         │ │
+│ │                                 │ │
+│ │  Feature 1:                     │ │
+│ │   ☑ Schnelle Lieferung          │ │
+│ │   [Icon: truck.svg]             │ │
+│ │                                 │ │
+│ │  Feature 2:                     │ │
+│ │   ☑ 24/7 Support                │ │
+│ │   [Icon: headset.svg]           │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ Haupt-Button                        │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Verwendung
+
+```bash
+# 1. Figma scannen (falls noch nicht geschehen)
+> Fetch Used Figma Components
+
+# 2. Heroes generieren mit conditional fields
+> Generate Heroes from Figma Inventory
+
+# 3. Dev-Server starten
+npm run dev
+
+# 4. Testen im Admin-Panel
+open http://localhost:3000/admin/collections/pages/create
+```
+
+---
+
+✅ **Heroes mit intelligenten conditional Fields - perfekt für unterschiedliche Hero-Strukturen!**

@@ -1,0 +1,805 @@
+---
+title: 'Generate ALL Blocks from Figma & Relume'
+description: 'Systematische Erfassung und Konvertierung ALLER Figma-Komponenten und Relume-Templates in PayloadCMS Blöcke mit deutschem UX und 1:1 Figma-Styles.'
+---
+
+## 🎯 Ziel
+Generiere ALLE verfügbaren Komponenten aus Figma und dem Relume-Repository als vollständige PayloadCMS Blocks.
+
+---
+
+## 📊 Komponenten-Kategorien (20 Kategorien, 1071+ Komponenten)
+
+**Nur für statische Pages über Pages Collection!**
+
+### ❌ Ausgeschlossene Kategorien (für separate Module):
+- **Blog** (68) → Eigenes Blog-Modul mit dynamischen Routes
+- **BlogPostHeader** (5) → Blog-spezifisch
+- **Career** (27) → Service-/Angebotsmodul
+- **Events** (37) → Projektmodul
+- **Portfolio** (23) → Projektmodul
+- **PortfolioHeader** (12) → Projektmodul
+
+**Neue Gesamt-Anzahl:** 1071 Komponenten (1243 - 172 = 1071)
+
+---
+
+### 1. **Layout Components** (527 Komponenten)
+Die größte Kategorie mit grundlegenden Layout-Strukturen:
+- Container, Grids, Flexbox-Layouts
+- Section Wrapper, Spacer, Divider
+- Multi-Column Layouts
+- Responsive Layout-Patterns
+
+### 2. **Header Components** (152 Komponenten)
+Hero Sections und Header-Varianten:
+- Hero mit Bild/Video
+- Hero mit Split-Screen
+- Hero mit Form
+- Hero mit Carousel
+- Animated Headers
+
+### 3. **CTA Components** (58 Komponenten)
+Call-to-Action Sections:
+- CTA mit Buttons
+- Newsletter Signup
+- Download-Bereiche
+- Conversion-optimierte Sections
+- Split-CTA
+- Video-CTA
+
+### 5. **MultistepForms** (46 Komponenten)
+Komplexe Formular-Workflows:
+- Wizard-Forms
+- Progress Indicators
+- Step Navigation
+- Form Validation
+- Success/Error States
+
+### 6. **Testimonials** (43 Komponenten)
+Kundenbewertungen und Referenzen:
+- Testimonial-Slider
+- Grid-Layout
+- Video-Testimonials
+- Star Ratings
+- Logos + Quotes
+
+### 7. **Events** (37 Komponenten)
+Event-Listings und Kalender:
+- Event-Cards
+- Event-Timeline
+- Calendar Views
+- Event-Details
+- Registration Forms
+
+### 8. **Contact** (30 Komponenten)
+Kontakt-Sections:
+- Contact Forms
+- Maps Integration
+- Office Locations
+- Team Contact Cards
+- Chat Integration
+
+### 7. **Gallery** (27 Komponenten)
+Bild- und Video-Galerien:
+- Masonry Grid
+- Lightbox
+- Image Slider
+- Video Gallery
+- Portfolio Grid
+
+### 8. **Pricing** (27 Komponenten)
+Preistabellen und Pakete:
+- 2-3 Column Pricing
+- Feature Comparison
+- Toggle Annual/Monthly
+- FAQ Integration
+- Trial Buttons
+
+### 9. **Navbar** (22 Komponenten)
+Navigationsleisten:
+- Desktop Navigation
+- Mobile Menu
+- Mega Menu
+- Sticky Header
+- Transparent Navbar
+- Search Integration
+
+### 10. **Team** (22 Komponenten)
+Team-Sections:
+- Team Grid
+- Team Member Cards
+- Social Links
+- Role Badges
+- Team Bios
+
+### 11. **Timelines** (21 Komponenten)
+Zeitstrahl-Darstellungen:
+- Vertical Timeline
+- Horizontal Timeline
+- Company History
+- Process Steps
+- Milestone Tracker
+
+### 12. **Footer** (17 Komponenten)
+Footer-Varianten:
+- Multi-Column Footer
+- Simple Footer
+- Newsletter Footer
+- Social Links
+- Copyright Info
+
+### 13. **Banners** (16 Komponenten)
+Notification und Promo-Banner:
+- Cookie Banner
+- Announcement Bar
+- Promo Banner
+- Countdown Banner
+- Dismissible Alerts
+
+### 14. **Comparison** (15 Komponenten)
+Vergleichstabellen:
+- Feature Comparison
+- Product Comparison
+- Before/After
+- Pros/Cons
+- Side-by-Side
+
+### 15. **FAQ** (14 Komponenten)
+FAQ-Sections:
+- Accordion-Style
+- Tab-Navigation
+- Search-Funktion
+- Category-Filter
+- Expandable Items
+
+### 16. **EventHeaderItems** (11 Komponenten)
+Event-Header Elemente (für statische Übersichtsseiten):
+- Date Display
+- Location Info
+- Speaker Cards
+- Countdown Timer
+
+### 17. **EventHeaders** (6 Komponenten)
+Event-Hero Sections (für statische Übersichtsseiten)
+
+### 18. **ContactModal** (6 Komponenten)
+Modal-Dialoge für Kontakt:
+- Popup Forms
+- Quick Contact
+- Callback Request
+
+### 19. **Logo** (6 Komponenten)
+Logo-Displays:
+- Client Logos
+- Partner Logos
+- Trust Badges
+- Logo Carousel
+
+### 20. **Loader** (5 Komponenten)
+Loading States:
+- Spinner
+- Skeleton Screens
+- Progress Bars
+- Loading Animations
+
+---
+
+## 🔄 Systematischer Generierungsprozess
+
+### Phase 1: Vorbereitung & Analyse
+```typescript
+// 1. Scanne nur Relume-Komponenten für statische Pages
+const relumeCategories = [
+  'Layout', 'Header', 'CTA', 'MultistepForms', 'Testimonials',
+  'Contact', 'Gallery', 'Pricing', 'Navbar', 'Team', 'Timelines', 
+  'Footer', 'Banners', 'Comparison', 'FAQ', 'EventHeaderItems', 
+  'EventHeaders', 'ContactModal', 'Logo', 'Loader'
+]
+
+// ❌ Ausgeschlossen (separate Module):
+// 'Blog', 'BlogPostHeader' → Blog-Modul
+// 'Career' → Service-/Angebotsmodul  
+// 'Events', 'Portfolio', 'PortfolioHeader' → Projektmodul
+
+// 2. Erfasse alle TSX-Dateien pro Kategorie
+for (const category of relumeCategories) {
+  const components = await glob(`relume/${category}/**/*.tsx`)
+  console.log(`${category}: ${components.length} Komponenten gefunden`)
+}
+```
+
+### Phase 2: Figma-Integration
+```typescript
+// 1. Verbinde mit Figma über MCP
+const figmaFile = await mcp.getFigmaFile(FIGMA_FILE_KEY)
+
+// 2. Extrahiere ALLE Komponenten (nicht nur unterhalb Hero)
+const allComponents = figmaFile.document.children.flatMap(page => {
+  return extractAllComponents(page, {
+    includeHero: true,
+    includeNavbar: true,
+    includeFooter: true,
+    includeAll: true
+  })
+})
+
+// 3. Mappe Figma-Komponenten zu Relume-Kategorien
+const mapping = mapFigmaToRelume(allComponents, relumeCategories)
+```
+
+### Phase 3: Block-Generierung pro Kategorie
+Für jede Kategorie und jede Komponente:
+
+#### 3.1 Dateistruktur erstellen
+```
+src/blocks/{Category}/{ComponentName}/
+├── Component.tsx       # React-Komponente
+├── config.ts          # PayloadCMS Block Config
+└── index.ts           # Exports
+```
+
+#### 3.2 Component.tsx generieren
+```tsx
+import { RichText } from '@/components/RichText'
+import { Media } from '@/components/Media'
+import { CMSLink } from '@/components/CMSLink'
+import type { {ComponentName}Block as {ComponentName}BlockType } from '@/payload-types'
+
+interface {ComponentName}Props {
+  block: {ComponentName}BlockType
+}
+
+export const {ComponentName}: React.FC<{ComponentName}Props> = ({ block }) => {
+  const { title, content, media, cta, items } = block || {}
+  
+  return (
+    <section className="py-16 md:py-24">
+      <div className="container mx-auto">
+        {/* Komponenten-spezifisches Layout basierend auf Figma */}
+        {title && <h2 className="text-3xl md:text-4xl font-bold mb-6">{title}</h2>}
+        {content && <RichText content={content} className="mb-8" />}
+        {media && <Media resource={media} className="rounded-xl shadow-lg" />}
+        {cta && <CMSLink {...cta} className="mt-8" />}
+        
+        {/* Array-Felder für wiederholbare Elemente */}
+        {items && items.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.map((item, index) => (
+              <div key={index} className="p-6 border rounded-lg">
+                {/* Item-spezifisches Layout */}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+```
+
+#### 3.3 config.ts generieren (DEUTSCHE UX!)
+```typescript
+import { Block } from 'payload/types'
+
+export const {ComponentName}Block: Block = {
+  slug: '{componentName}',
+  labels: {
+    singular: '{ComponentName} Block',
+    plural: '{ComponentName} Blöcke',
+  },
+  imageURL: '/icons/blocks/{category}/{componentName}.svg',
+  interfaceName: '{ComponentName}Block',
+  fields: [
+    // Basis-Felder (deutsche Labels!)
+    {
+      name: 'title',
+      type: 'text',
+      label: 'Überschrift',
+      admin: {
+        description: 'Hauptüberschrift dieses Blocks',
+      },
+    },
+    {
+      name: 'content',
+      type: 'richText',
+      label: 'Inhalt',
+      admin: {
+        description: 'Fließtext-Inhalt mit Formatierung',
+      },
+    },
+    {
+      name: 'media',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Medien',
+      admin: {
+        description: 'Bild oder Video für diesen Block',
+      },
+    },
+    {
+      name: 'cta',
+      type: 'group',
+      label: 'Call-to-Action',
+      admin: {
+        description: 'Button oder Link am Ende des Blocks',
+      },
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          label: 'Button-Text',
+          required: true,
+        },
+        {
+          name: 'url',
+          type: 'text',
+          label: 'Ziel-URL',
+        },
+        {
+          name: 'type',
+          type: 'select',
+          label: 'Link-Typ',
+          options: [
+            { label: 'Interner Link', value: 'internal' },
+            { label: 'Externer Link', value: 'external' },
+            { label: 'E-Mail', value: 'email' },
+            { label: 'Telefon', value: 'phone' },
+          ],
+          defaultValue: 'internal',
+        },
+        {
+          name: 'newTab',
+          type: 'checkbox',
+          label: 'In neuem Tab öffnen',
+          defaultValue: false,
+        },
+      ],
+    },
+    // Array-Felder für wiederholbare Elemente
+    {
+      name: 'items',
+      type: 'array',
+      label: 'Elemente',
+      labels: {
+        singular: 'Element',
+        plural: 'Elemente',
+      },
+      admin: {
+        description: 'Wiederholbare Elemente innerhalb dieses Blocks',
+      },
+      fields: [
+        {
+          name: 'heading',
+          type: 'text',
+          label: 'Überschrift',
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          label: 'Beschreibung',
+        },
+        {
+          name: 'icon',
+          type: 'upload',
+          relationTo: 'media',
+          label: 'Icon',
+        },
+      ],
+    },
+  ],
+  admin: {
+    group: 'Inhaltsblöcke',
+    description: `{ComponentName} aus der Kategorie {Category}. Automatisch generiert aus Relume-Template.`,
+  },
+}
+```
+
+#### 3.4 index.ts generieren
+```typescript
+export { {ComponentName} } from './Component'
+export { {ComponentName}Block } from './config'
+```
+
+### Phase 4: Automatische Registrierung
+
+#### 4.1 Alle Blocks sammeln
+```typescript
+// Generiere automatisch einen zentralen Export
+// src/blocks/index.ts
+
+// Layout Blocks
+export * from './Layout/Layout1'
+export * from './Layout/Layout2'
+// ... (alle 527 Layout-Komponenten)
+
+// Header Blocks
+export * from './Header/Header1'
+export * from './Header/Header2'
+// ... (alle 152 Header-Komponenten)
+
+// Blog Blocks
+export * from './Blog/Blog1'
+export * from './Blog/Blog2'
+// ... (alle 68 Blog-Komponenten)
+
+// ... (alle anderen Kategorien)
+```
+
+#### 4.2 In Pages Collection registrieren
+```typescript
+// src/collections/Pages/config.ts
+
+import {
+  // Layout Blocks (527)
+  Layout1Block, Layout2Block, /* ... */,
+  
+  // Header Blocks (152)
+  Header1Block, Header2Block, /* ... */,
+  
+  // Blog Blocks (68)
+  Blog1Block, Blog2Block, /* ... */,
+  
+  // CTA Blocks (58)
+  CTA1Block, CTA2Block, /* ... */,
+  
+  // MultistepForms Blocks (46)
+  MultistepForm1Block, MultistepForm2Block, /* ... */,
+  
+  // ... alle anderen Kategorien
+} from '@/blocks'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'layout',
+      type: 'blocks',
+      label: 'Seitenaufbau',
+      blocks: [
+        // Layout Blocks
+        Layout1Block, Layout2Block, /* ... alle 527 */,
+        
+        // Header Blocks
+        Header1Block, Header2Block, /* ... alle 152 */,
+        
+        // Blog Blocks
+        Blog1Block, Blog2Block, /* ... alle 68 */,
+        
+        // CTA Blocks
+        CTA1Block, CTA2Block, /* ... alle 58 */,
+        
+        // MultistepForms Blocks
+        MultistepForm1Block, MultistepForm2Block, /* ... alle 46 */,
+        
+        // Testimonials Blocks
+        Testimonial1Block, Testimonial2Block, /* ... alle 43 */,
+        
+        // Events Blocks
+        Event1Block, Event2Block, /* ... alle 37 */,
+        
+        // Contact Blocks
+        Contact1Block, Contact2Block, /* ... alle 30 */,
+        
+        // Career Blocks
+        Career1Block, Career2Block, /* ... alle 27 */,
+        
+        // Gallery Blocks
+        Gallery1Block, Gallery2Block, /* ... alle 27 */,
+        
+        // Pricing Blocks
+        Pricing1Block, Pricing2Block, /* ... alle 27 */,
+        
+        // Portfolio Blocks
+        Portfolio1Block, Portfolio2Block, /* ... alle 23 */,
+        
+        // Navbar Blocks
+        Navbar1Block, Navbar2Block, /* ... alle 22 */,
+        
+        // Team Blocks
+        Team1Block, Team2Block, /* ... alle 22 */,
+        
+        // Timelines Blocks
+        Timeline1Block, Timeline2Block, /* ... alle 21 */,
+        
+        // Footer Blocks
+        Footer1Block, Footer2Block, /* ... alle 17 */,
+        
+        // Banners Blocks
+        Banner1Block, Banner2Block, /* ... alle 16 */,
+        
+        // Comparison Blocks
+        Comparison1Block, Comparison2Block, /* ... alle 15 */,
+        
+        // FAQ Blocks
+        FAQ1Block, FAQ2Block, /* ... alle 14 */,
+        
+        // PortfolioHeader Blocks
+        PortfolioHeader1Block, PortfolioHeader2Block, /* ... alle 12 */,
+        
+        // EventHeaderItems Blocks
+        EventHeaderItem1Block, EventHeaderItem2Block, /* ... alle 11 */,
+        
+        // EventHeaders Blocks
+        EventHeader1Block, EventHeader2Block, /* ... alle 6 */,
+        
+        // ContactModal Blocks
+        ContactModal1Block, ContactModal2Block, /* ... alle 6 */,
+        
+        // Logo Blocks
+        Logo1Block, Logo2Block, /* ... alle 6 */,
+        
+        // BlogPostHeader Blocks
+        BlogPostHeader1Block, BlogPostHeader2Block, /* ... alle 5 */,
+        
+        // Loader Blocks
+        Loader1Block, Loader2Block, /* ... alle 5 */,
+      ],
+    },
+  ],
+}
+```
+
+### Phase 5: PageRenderer erweitern
+
+```typescript
+// src/app/(frontend)/[...slug]/page.tsx
+
+import {
+  // Layout Components
+  Layout1, Layout2, /* ... alle 527 */,
+  
+  // Header Components
+  Header1, Header2, /* ... alle 152 */,
+  
+  // Blog Components
+  Blog1, Blog2, /* ... alle 68 */,
+  
+  // ... alle anderen Kategorien
+} from '@/blocks'
+
+const blockComponents = {
+  // Layout
+  layout1: Layout1,
+  layout2: Layout2,
+  // ... alle 527
+  
+  // Header
+  header1: Header1,
+  header2: Header2,
+  // ... alle 152
+  
+  // Blog
+  blog1: Blog1,
+  blog2: Blog2,
+  // ... alle 68
+  
+  // ... alle anderen 1243+ Komponenten
+}
+
+export const PageRenderer = ({ blocks }) => {
+  return (
+    <>
+      {blocks?.map((block, index) => {
+        const BlockComponent = blockComponents[block.blockType]
+        
+        if (!BlockComponent) {
+          console.warn(`Block type "${block.blockType}" not found`)
+          return null
+        }
+        
+        return <BlockComponent key={index} block={block} />
+      })}
+    </>
+  )
+}
+```
+
+---
+
+## 🎨 Kategorie-spezifische Anpassungen
+
+### Layout-Blocks
+- Minimale Content-Felder
+- Focus auf Structure & Spacing
+- Container-Optionen (full-width, container, narrow)
+- Background-Optionen (color, gradient, image)
+
+### Header/Hero-Blocks
+- Rich Media Support (Bild, Video, Lottie)
+- Multiple CTA Buttons
+- Overlay-Optionen
+- Alignment-Optionen
+
+### Form-Blocks (MultistepForms, Contact)
+- Form-Builder Integration
+- Validation Rules
+- Success/Error Messages
+- Email-Notifications
+
+### Dynamic Blocks (Blog, Events, Portfolio)
+- Dynamic Data Loading
+- Filtering & Sorting
+- Pagination
+- Search Integration
+
+### Interactive Blocks (Testimonials, Gallery, FAQ)
+- Slider/Carousel Integration
+- Lightbox-Funktionalität
+- Accordion-Logik
+- Animation States
+
+---
+
+## 📦 Automatisierung & Scripts
+
+### Generierungs-Script
+```typescript
+// scripts/generate-all-blocks.ts
+
+import { glob } from 'glob'
+import { readFile, writeFile, mkdir } from 'fs/promises'
+import path from 'path'
+
+async function generateAllBlocks() {
+  const categories = await glob('relume/*/', { onlyDirectories: true })
+  
+  for (const categoryPath of categories) {
+    const category = path.basename(categoryPath)
+    const components = await glob(`${categoryPath}/**/*.tsx`)
+    
+    console.log(`\n📦 Generiere ${category} (${components.length} Komponenten)...`)
+    
+    for (const componentPath of components) {
+      const componentName = path.basename(componentPath, '.tsx')
+      
+      // 1. Lese Relume-Komponente
+      const relumeCode = await readFile(componentPath, 'utf-8')
+      
+      // 2. Analysiere Props & Structure
+      const analysis = analyzeComponent(relumeCode)
+      
+      // 3. Generiere Block-Struktur
+      await generateBlockFiles({
+        category,
+        componentName,
+        analysis,
+      })
+      
+      console.log(`  ✅ ${componentName}`)
+    }
+  }
+  
+  console.log('\n🎉 Alle Blocks generiert!')
+  console.log('\n📊 Zusammenfassung:')
+  console.log(`   - ${categories.length} Kategorien`)
+  console.log(`   - ${components.length} Komponenten`)
+  console.log(`   - ${components.length * 3} Dateien erstellt`)
+}
+
+generateAllBlocks()
+```
+
+### Registrierungs-Script
+```typescript
+// scripts/register-all-blocks.ts
+
+async function registerAllBlocks() {
+  const blocks = await glob('src/blocks/**/*.config.ts')
+  
+  // Generiere automatisch index.ts
+  const exports = blocks.map(block => {
+    const name = path.basename(path.dirname(block))
+    return `export * from './${name}'`
+  }).join('\n')
+  
+  await writeFile('src/blocks/index.ts', exports)
+  
+  // Generiere Pages Collection Config
+  const imports = blocks.map(block => {
+    const name = path.basename(path.dirname(block))
+    return `import { ${name}Block } from '@/blocks/${name}'`
+  }).join('\n')
+  
+  const blockArray = blocks.map(block => {
+    const name = path.basename(path.dirname(block))
+    return `${name}Block`
+  }).join(',\n    ')
+  
+  // Aktualisiere Pages Collection
+  // ...
+}
+```
+
+---
+
+## ✅ Validierung & Testing
+
+### 1. Build-Test
+```bash
+npm run build
+# Alle 1243+ Blocks müssen ohne TypeScript-Fehler kompilieren
+```
+
+### 2. Admin-Panel Test
+```bash
+npm run dev
+# Öffne http://localhost:3000/admin
+# Prüfe: Alle Blocks im Pages Layout-Builder sichtbar
+```
+
+### 3. Frontend-Rendering Test
+```typescript
+// Teste, ob alle Blocks korrekt rendern
+for (const blockType of Object.keys(blockComponents)) {
+  render(<BlockComponent blockType={blockType} block={mockData} />)
+  // Assertions...
+}
+```
+
+### 4. Performance-Test
+```bash
+# Bundle-Size Check
+npm run analyze
+# Ziel: < 500KB für gesamtes Block-System
+```
+
+---
+
+## 🚀 Ausführung
+
+**Führe diesen Command aus, um ALLE 1243+ Komponenten als PayloadCMS Blocks zu generieren:**
+
+```bash
+cursor> Generate ALL Blocks from Figma & Relume
+```
+
+**Erwartete Ausgabe:**
+```
+📊 Starte vollständige Block-Generierung...
+
+📦 Layout (527 Komponenten)
+  ✅ Layout1 → src/blocks/Layout/Layout1/
+  ✅ Layout2 → src/blocks/Layout/Layout2/
+  ... [525 weitere]
+
+📦 Header (152 Komponenten)
+  ✅ Header1 → src/blocks/Header/Header1/
+  ✅ Header2 → src/blocks/Header/Header2/
+  ... [150 weitere]
+
+📦 Blog (68 Komponenten)
+  ✅ Blog1 → src/blocks/Blog/Blog1/
+  ... [67 weitere]
+
+... [23 weitere Kategorien]
+
+✅ Generierung abgeschlossen!
+
+📊 Zusammenfassung:
+   - 26 Kategorien verarbeitet
+   - 1243 Komponenten konvertiert
+   - 3729 Dateien erstellt (Component.tsx, config.ts, index.ts)
+   - Alle Blocks in Pages Collection registriert
+   - Deutsche UX für alle Admin-Labels
+   - TypeScript Types generiert
+
+🚀 Nächste Schritte:
+   1. npm run build (TypeScript validieren)
+   2. npm run dev (Admin-Panel testen)
+   3. Öffne http://localhost:3000/admin/collections/pages
+   4. Erstelle eine neue Page und wähle aus 1243+ Blocks!
+```
+
+---
+
+## 🎯 Vorteile dieser Optimierung
+
+✅ **Vollständigkeit**: ALLE 1243+ Komponenten werden erfasst
+✅ **Systematik**: Kategorie-basierte Organisation
+✅ **Automatisierung**: Bulk-Generierung ohne manuellen Aufwand
+✅ **Deutsche UX**: Alle Admin-Labels auf Deutsch
+✅ **Type-Safety**: Vollständige TypeScript-Integration
+✅ **Skalierbarkeit**: Einfaches Hinzufügen neuer Komponenten
+✅ **Maintainability**: Klare Struktur & Dokumentation
+✅ **Performance**: Optimierte Bundle-Größe durch Code-Splitting

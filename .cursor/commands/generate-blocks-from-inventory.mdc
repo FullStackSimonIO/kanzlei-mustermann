@@ -1,0 +1,445 @@
+---
+title: 'Generate Blocks from Figma Inventory'
+description: 'Generiert PayloadCMS Blocks nur für die im FIGMA_INVENTORY.json gefundenen verwendeten Komponenten.'
+---
+
+## 🎯 Ziel
+Generiere PayloadCMS Blocks **nur für die tatsächlich im Figma verwendeten Komponenten**, basierend auf dem zuvor erstellten Inventar.
+
+---
+
+## 📋 Voraussetzungen
+
+1. **Figma Inventory muss existieren:**
+   ```bash
+   # Falls nicht vorhanden, zuerst ausführen:
+   > Fetch Used Figma Components
+   ```
+
+2. **Prüfe FIGMA_INVENTORY.json:**
+   - Datei muss existieren
+   - Enthält `relumeMapping` Array
+   - Enthält `unmappedComponents` Array (optional)
+
+---
+
+## 🔄 Generierungs-Workflow
+
+### Phase 1: Inventar laden
+
+```typescript
+// 1. Lade Figma Inventory
+const inventory = JSON.parse(
+  await fs.readFile('FIGMA_INVENTORY.json', 'utf-8')
+)
+
+console.log('📦 Figma Inventory geladen:')
+console.log(`   - Verwendete Komponenten: ${inventory.meta.totalUsedComponents}`)
+console.log(`   - Gemappte Komponenten: ${inventory.meta.totalMappedComponents}`)
+console.log(`   - Zu generierende Blocks: ${inventory.meta.componentsToGenerate}`)
+
+// Validiere Inventar
+if (!inventory.relumeMapping || inventory.relumeMapping.length === 0) {
+  throw new Error('❌ Keine gemappten Komponenten gefunden. Führe erst "Fetch Used Figma Components" aus.')
+}
+```
+
+---
+
+### Phase 2: Block-Liste erstellen
+
+```typescript
+// 2. Erstelle Liste der zu generierenden Blocks
+const blocksToGenerate = []
+
+// Automatisch gemappte Komponenten (OHNE Heroes!)
+for (const mapping of inventory.relumeMapping) {
+  // Heroes werden separat behandelt
+  if (mapping.category === 'Hero') {
+    console.log(`   ⏭️ ${mapping.figma.name} → Hero (wird separat generiert)`)
+    continue
+  }
+  
+  blocksToGenerate.push({
+    figmaComponent: mapping.figma,
+    relumeTemplate: mapping.relume,
+    category: mapping.category,
+    blockName: generateBlockName(mapping.figma.name),
+    generationType: 'auto',
+  })
+}
+
+// Unmapped Components (mit Fallback-Template)
+for (const unmapped of inventory.unmappedComponents || []) {
+  const fallbackTemplate = await findFallbackTemplate(unmapped.category)
+  
+  blocksToGenerate.push({
+    figmaComponent: unmapped.figma,
+    relumeTemplate: fallbackTemplate,
+    category: unmapped.category,
+    blockName: generateBlockName(unmapped.figma.name),
+    generationType: 'fallback',
+  })
+}
+
+console.log(`\n📊 Zu generierende Blocks: ${blocksToGenerate.length}`)
+
+// Gruppiere nach Kategorie
+const byCategory = blocksToGenerate.reduce((acc, block) => {
+  if (!acc[block.category]) acc[block.category] = []
+  acc[block.category].push(block)
+  return acc
+}, {})
+
+console.log('\n📦 Verteilung nach Kategorie:')
+for (const [category, blocks] of Object.entries(byCategory)) {
+  console.log(`   - ${category}: ${blocks.length} Blocks`)
+}
+```
+
+---
+
+### Phase 3: Blocks generieren
+
+```typescript
+// 3. Generiere Blocks pro Kategorie
+let successCount = 0
+let failureCount = 0
+const generationLog = []
+
+for (const [category, blocks] of Object.entries(byCategory)) {
+  console.log(`\n📦 Generiere ${category} (${blocks.length} Blocks)...`)
+  
+  for (const block of blocks) {
+    try {
+      const blockPath = `src/blocks/${category}/${block.blockName}`
+      
+      // Erstelle Block-Verzeichnis
+      await fs.mkdir(blockPath, { recursive: true })
+      
+      // 1. Lade Relume-Template als Basis
+      const relumeTemplate = await fs.readFile(block.relumeTemplate, 'utf-8')
+      
+      // 2. Analysiere Figma-Komponente für Styles
+      const figmaStyles = await analyzeFigmaComponent(block.figmaComponent.id)
+      
+      // 3. Generiere Component.tsx
+      const componentCode = generateComponentTSX({
+        blockName: block.blockName,
+        relumeTemplate,
+        figmaStyles,
+        figmaComponent: block.figmaComponent,
+      })
+      
+      await fs.writeFile(
+        `${blockPath}/Component.tsx`,
+        componentCode
+      )
+      
+      // 4. Generiere config.ts
+      const configCode = generateConfigTS({
+        blockName: block.blockName,
+        category: category,
+        figmaComponent: block.figmaComponent,
+        relumeTemplate,
+      })
+      
+      await fs.writeFile(
+        `${blockPath}/config.ts`,
+        configCode
+      )
+      
+      // 5. Generiere index.ts
+      const indexCode = `export { ${block.blockName} } from './Component'
+export { ${block.blockName}Block } from './config'
+`
+      
+      await fs.writeFile(
+        `${blockPath}/index.ts`,
+        indexCode
+      )
+      
+      successCount++
+      console.log(`   ✅ ${block.blockName}`)
+      
+      generationLog.push({
+        block: block.blockName,
+        category: category,
+        status: 'success',
+        figmaComponent: block.figmaComponent.name,
+        generationType: block.generationType,
+      })
+      
+    } catch (error) {
+      failureCount++
+      console.error(`   ❌ ${block.blockName}: ${error.message}`)
+      
+      generationLog.push({
+        block: block.blockName,
+        category: category,
+        status: 'failed',
+        error: error.message,
+      })
+    }
+  }
+}
+
+console.log(`\n📊 Generierungs-Ergebnis:`)
+console.log(`   ✅ Erfolgreich: ${successCount}`)
+console.log(`   ❌ Fehlgeschlagen: ${failureCount}`)
+console.log(`   📊 Erfolgsquote: ${((successCount / blocksToGenerate.length) * 100).toFixed(1)}%`)
+```
+
+---
+
+### Phase 4: Zentrale Registrierung
+
+```typescript
+// 4. Generiere zentrale Export-Datei
+const allBlocks = blocksToGenerate.filter(b => 
+  generationLog.find(l => l.block === b.blockName && l.status === 'success')
+)
+
+// src/blocks/index.ts
+const exportsCode = allBlocks.map(block => 
+  `export { ${block.blockName}, ${block.blockName}Block } from './${block.category}/${block.blockName}'`
+).join('\n')
+
+await fs.writeFile('src/blocks/index.ts', exportsCode)
+
+console.log(`\n✅ Zentrale Exports erstellt: src/blocks/index.ts`)
+
+// 5. Aktualisiere Pages Collection
+const pagesConfigPath = 'src/collections/Pages/config.ts'
+const pagesConfig = await fs.readFile(pagesConfigPath, 'utf-8')
+
+// Generiere Imports
+const imports = allBlocks.map(block => 
+  `  ${block.blockName}Block,`
+).join('\n')
+
+// Generiere Blocks-Array
+const blocksArray = allBlocks.map(block => 
+  `    ${block.blockName}Block,`
+).join('\n')
+
+// Update Pages Config
+const updatedPagesConfig = pagesConfig.replace(
+  /blocks:\s*\[[\s\S]*?\]/,
+  `blocks: [\n${blocksArray}\n  ]`
+)
+
+await fs.writeFile(pagesConfigPath, updatedPagesConfig)
+
+console.log(`✅ Pages Collection aktualisiert: ${allBlocks.length} Blocks registriert`)
+
+// 6. Aktualisiere PageRenderer
+const pageRendererPath = 'src/components/PageRenderer/index.tsx'
+const pageRenderer = await fs.readFile(pageRendererPath, 'utf-8')
+
+// Generiere Component-Imports
+const componentImports = allBlocks.map(block => 
+  `  ${block.blockName},`
+).join('\n')
+
+// Generiere Mapping
+const componentMapping = allBlocks.map(block => {
+  const slug = `${block.category.toLowerCase()}${block.blockName}`
+  return `  '${slug}': ${block.blockName},`
+}).join('\n')
+
+// Update PageRenderer
+const updatedPageRenderer = pageRenderer.replace(
+  /const blockComponents = \{[\s\S]*?\}/,
+  `const blockComponents = {\n${componentMapping}\n}`
+)
+
+await fs.writeFile(pageRendererPath, updatedPageRenderer)
+
+console.log(`✅ PageRenderer aktualisiert: ${allBlocks.length} Komponenten gemappt`)
+```
+
+---
+
+### Phase 5: Dokumentation
+
+```typescript
+// 7. Generiere Dokumentation
+const documentation = {
+  meta: {
+    generatedAt: new Date().toISOString(),
+    basedOn: 'FIGMA_INVENTORY.json',
+    totalBlocks: allBlocks.length,
+  },
+  
+  blocks: allBlocks.map(block => ({
+    name: block.blockName,
+    category: block.category,
+    figmaComponent: block.figmaComponent.name,
+    figmaPage: block.figmaComponent.page,
+    generationType: block.generationType,
+  })),
+  
+  byCategory: Object.entries(byCategory).map(([category, blocks]) => ({
+    category,
+    count: blocks.filter(b => 
+      generationLog.find(l => l.block === b.blockName && l.status === 'success')
+    ).length,
+  })),
+  
+  generationLog,
+}
+
+await fs.writeFile(
+  'BLOCKS_GENERATION_REPORT.json',
+  JSON.stringify(documentation, null, 2)
+)
+
+// Markdown-Report
+const markdown = `
+# PayloadCMS Blocks - Generierungs-Report
+
+**Generiert:** ${documentation.meta.generatedAt}
+**Basierend auf:** FIGMA_INVENTORY.json
+
+---
+
+## 📊 Zusammenfassung
+
+- **Generierte Blocks:** ${allBlocks.length}
+- **Kategorien:** ${Object.keys(byCategory).length}
+- **Erfolgsrate:** ${((successCount / blocksToGenerate.length) * 100).toFixed(1)}%
+
+---
+
+## 📦 Blocks nach Kategorie
+
+${documentation.byCategory.map(({ category, count }) => 
+  `### ${category} (${count} Blocks)\n\n` +
+  allBlocks
+    .filter(b => b.category === category)
+    .map(b => `- **${b.blockName}** ← \`${b.figmaComponent.name}\` (${b.figmaComponent.page})`)
+    .join('\n')
+).join('\n\n')}
+
+---
+
+## 🎯 Generierungstypen
+
+- **Auto:** ${allBlocks.filter(b => b.generationType === 'auto').length} Blocks (exaktes Relume-Match)
+- **Fallback:** ${allBlocks.filter(b => b.generationType === 'fallback').length} Blocks (Fallback-Template verwendet)
+
+---
+
+## 📁 Generierte Dateien
+
+\`\`\`
+src/blocks/
+${Object.keys(byCategory).map(category => 
+  `├── ${category}/\n` +
+  byCategory[category]
+    .slice(0, 3)
+    .map(b => `│   ├── ${b.blockName}/\n│   │   ├── Component.tsx\n│   │   ├── config.ts\n│   │   └── index.ts`)
+    .join('\n') +
+  (byCategory[category].length > 3 ? `\n│   └── ... (${byCategory[category].length - 3} weitere)` : '')
+).join('\n')}
+└── index.ts (zentrale Exports)
+
+Gesamt: ${allBlocks.length * 3 + 1} Dateien
+\`\`\`
+
+---
+
+## ✅ Nächste Schritte
+
+1. **TypeScript-Validierung**
+   \`\`\`bash
+   npm run type-check
+   \`\`\`
+
+2. **Build-Test**
+   \`\`\`bash
+   npm run build
+   \`\`\`
+
+3. **Dev-Server starten**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+4. **Admin-Panel testen**
+   - Öffne http://localhost:3000/admin
+   - Gehe zu Pages → Neue Page
+   - Prüfe: ${allBlocks.length} Blocks verfügbar
+
+---
+
+**Vollständiger Report:** \`BLOCKS_GENERATION_REPORT.json\`
+`
+
+await fs.writeFile('BLOCKS_GENERATION_REPORT.md', markdown)
+
+console.log('\n📄 Dokumentation erstellt:')
+console.log('   - BLOCKS_GENERATION_REPORT.json')
+console.log('   - BLOCKS_GENERATION_REPORT.md')
+```
+
+---
+
+## 🎉 Erfolgsmeldung
+
+```typescript
+console.log('\n' + '='.repeat(80))
+console.log('🎉 BLOCK-GENERIERUNG ABGESCHLOSSEN!')
+console.log('='.repeat(80))
+console.log(`
+📊 Zusammenfassung:
+   ✅ ${successCount} Blocks erfolgreich generiert
+   ${failureCount > 0 ? `❌ ${failureCount} Fehler` : ''}
+   📦 ${Object.keys(byCategory).length} Kategorien
+   📁 ${successCount * 3 + 1} Dateien erstellt
+
+📁 Generierte Struktur:
+   - src/blocks/{Category}/{BlockName}/Component.tsx
+   - src/blocks/{Category}/{BlockName}/config.ts
+   - src/blocks/{Category}/{BlockName}/index.ts
+   - src/blocks/index.ts (zentrale Exports)
+
+✅ Registriert in:
+   - src/collections/Pages/config.ts
+   - src/components/PageRenderer/index.tsx
+
+📄 Dokumentation:
+   - BLOCKS_GENERATION_REPORT.json
+   - BLOCKS_GENERATION_REPORT.md
+
+🚀 Nächste Schritte:
+   1. npm run type-check
+   2. npm run build
+   3. npm run dev
+   4. Öffne http://localhost:3000/admin
+
+💡 Hinweis:
+   Es wurden NUR die im Figma verwendeten ${successCount} Komponenten
+   als Blocks generiert (nicht alle 1071 Relume-Templates).
+`)
+
+console.log('='.repeat(80))
+```
+
+---
+
+## 🚀 Verwendung
+
+**Führe diesen Command aus:**
+```bash
+> Generate Blocks from Figma Inventory
+```
+
+**Voraussetzung:**
+- `FIGMA_INVENTORY.json` muss existieren
+- Führe ggf. zuerst aus: `> Fetch Used Figma Components`
+
+---
+
+✅ **Generiert nur die tatsächlich benötigten Blocks basierend auf deinem Figma-Design!**

@@ -1,0 +1,923 @@
+---
+title: 'Generate Blocks from Figma - Master Orchestrator'
+description: 'Orchestriert die Generierung von PayloadCMS Blocks basierend auf den tatsächlich im Figma verwendeten Komponenten.'
+---
+
+## 🎯 Master-Orchestrator für intelligente Block-Generierung
+
+Dieser Command orchestriert die systematische Generierung nur der **im Figma tatsächlich verwendeten** Komponenten als PayloadCMS Blocks.
+
+---
+
+## 📋 PRE-FLIGHT CHECKS
+
+Vor dem Start prüfe:
+
+### 1. Figma MCP Verbindung
+```bash
+# Teste Figma-Verbindung
+> Test Figma MCP Connection
+```
+
+### 2. Projektstruktur vorhanden
+- [ ] `src/blocks/` Verzeichnis existiert
+- [ ] `src/collections/Pages/config.ts` existiert
+- [ ] `src/components/RichText/` existiert
+- [ ] `src/components/Media/` existiert
+- [ ] `src/components/CMSLink/` existiert
+
+### 3. TypeScript funktioniert
+```bash
+npm run type-check
+# Sollte ohne Fehler durchlaufen
+```
+
+---
+
+## 🔄 INTELLIGENTE GENERIERUNG WORKFLOW
+
+### PHASE 1: Figma-Analyse (Dauer: ~2-3 Min)
+
+#### Schritt 1.1: Figma-Komponenten scannen
+```bash
+> Fetch Used Figma Components
+```
+
+**Output:** `FIGMA_INVENTORY.json` mit verwendeten Komponenten
+
+#### Schritt 1.2: Inventar analysieren
+```typescript
+// Lade Figma Inventory
+const inventory = JSON.parse(
+  await fs.readFile('FIGMA_INVENTORY.json', 'utf-8')
+)
+
+console.log('📊 Figma Inventory geladen:')
+console.log(`   - Verwendete Komponenten: ${inventory.meta.totalUsedComponents}`)
+console.log(`   - Gemappte Komponenten: ${inventory.meta.totalMappedComponents}`)
+console.log(`   - Zu generierende Blocks: ${inventory.meta.componentsToGenerate}`)
+
+// Gruppiere nach Kategorie
+const byCategory = {}
+for (const mapping of inventory.relumeMapping) {
+  if (!byCategory[mapping.category]) {
+    byCategory[mapping.category] = []
+  }
+  byCategory[mapping.category].push(mapping)
+}
+
+console.log('\n📦 Verteilung nach Kategorie:')
+for (const [category, mappings] of Object.entries(byCategory)) {
+  console.log(`   - ${category}: ${mappings.length} Blocks`)
+}
+
+// ❌ Automatisch ausgeschlossen (nicht im Figma verwendet):
+// Blog-Komponenten, die nicht im Design vorkommen
+// Career-Komponenten, die nicht im Design vorkommen
+// etc.
+
+console.log(`\n💡 Es werden nur ${inventory.meta.componentsToGenerate} Blocks generiert`)
+console.log(`   (statt alle 1071 Relume-Templates)`)
+```
+
+#### Schritt 1.2: Priorisierung
+```typescript
+// Sortiere nach Priorität & Häufigkeit
+const sortedCategories = Object.entries(categories)
+  .sort((a, b) => {
+    // Erst nach Priorität
+    const priorityOrder = { high: 0, medium: 1, low: 2 }
+    const priorityDiff = priorityOrder[a[1].priority] - priorityOrder[b[1].priority]
+    if (priorityDiff !== 0) return priorityDiff
+    
+    // Dann nach Anzahl (größere zuerst)
+    return b[1].count - a[1].count
+  })
+
+console.log('🎯 Generierungs-Reihenfolge:')
+sortedCategories.forEach(([cat, info], idx) => {
+  console.log(`   ${idx + 1}. ${cat} (${info.count} Komponenten, ${info.priority})`)
+})
+```
+
+**Erwartete Reihenfolge:**
+1. Layout (527, high) ← Größte Kategorie
+2. Header (152, high) ← Hero Sections
+3. CTA (58, high) ← Conversion-kritisch
+4. Testimonials (43, high) ← Social Proof
+5. Contact (30, high) ← Lead-Generation
+6. Pricing (27, high) ← Sales-relevant
+7. Navbar (22, high) ← Navigation
+8. Footer (17, high) ← Wichtig für alle Seiten
+9. Blog (68, medium) ← Content-Seiten
+10. MultistepForms (46, medium) ← Interaktive Forms
+11. ... (weitere 16 Kategorien)
+
+---
+
+### PHASE 2: Hero-Generierung (Dauer: ~3-5 Min)
+
+```bash
+# Zuerst Heroes mit conditional fields
+> Generate Heroes from Figma Inventory
+```
+
+**Output:** Heroes unter `/src/heros/` mit intelligenten conditional fields
+
+---
+
+### PHASE 3: Block-Generierung (Dauer: ~5-8 Min)
+
+```bash
+# Dann restliche Blocks
+> Generate Blocks from Figma Inventory
+```
+
+**Output:** Nur Blocks (Heroes ausgeschlossen)
+
+Wir generieren in Batches, um Token-Limits und Performance zu optimieren.
+
+#### Batch 1: Critical Components (High Priority)
+**Kategorien:** Layout, Header, CTA, Testimonials, Contact, Pricing, Navbar, Footer
+**Komponenten-Anzahl:** 527 + 152 + 58 + 43 + 30 + 27 + 22 + 17 = 876
+**Geschätzte Dauer:** ~10 Minuten
+**Verwendung:** Basis-Layouts, Hero-Sections, Conversions, Navigation
+
+```typescript
+async function generateBatch1() {
+  const highPriorityCategories = [
+    'Layout', 'Header', 'CTA', 'Testimonials', 
+    'Contact', 'Pricing', 'Navbar', 'Footer'
+  ]
+  
+  for (const category of highPriorityCategories) {
+    console.log(`\n📦 Generiere ${category}...`)
+    await generateCategoryBlocks(category)
+  }
+}
+```
+
+**Pro Komponente generieren:**
+1. `src/blocks/{Category}/{ComponentName}/Component.tsx`
+2. `src/blocks/{Category}/{ComponentName}/config.ts`
+3. `src/blocks/{Category}/{ComponentName}/index.ts`
+
+**Component.tsx Template:**
+```tsx
+import React from 'react'
+import { RichText } from '@/components/RichText'
+import { Media } from '@/components/Media'
+import { CMSLink } from '@/components/CMSLink'
+import type { {ComponentName}Block as {ComponentName}BlockType } from '@/payload-types'
+
+interface {ComponentName}Props {
+  block: {ComponentName}BlockType
+}
+
+export const {ComponentName}: React.FC<{ComponentName}Props> = ({ block }) => {
+  // Extrahiere Relume-Komponente und adaptiere für PayloadCMS
+  const { 
+    // Standard-Felder
+    title,
+    tagline,
+    description,
+    content,
+    
+    // Media
+    media,
+    backgroundImage,
+    icon,
+    
+    // CTAs
+    primaryCTA,
+    secondaryCTA,
+    
+    // Arrays
+    items,
+    features,
+    testimonials,
+    
+    // Layout-Optionen
+    layout,
+    alignment,
+    backgroundColor,
+  } = block || {}
+  
+  return (
+    <section 
+      className={`
+        py-16 md:py-24 
+        ${backgroundColor ? `bg-${backgroundColor}` : 'bg-background'}
+      `}
+    >
+      <div className={`
+        container mx-auto
+        ${alignment === 'center' ? 'text-center' : ''}
+      `}>
+        {/* Tagline */}
+        {tagline && (
+          <span className="inline-block px-3 py-1 mb-4 text-sm font-medium rounded-full bg-primary/10 text-primary">
+            {tagline}
+          </span>
+        )}
+        
+        {/* Titel */}
+        {title && (
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
+            {title}
+          </h2>
+        )}
+        
+        {/* Description */}
+        {description && (
+          <p className="text-lg text-muted-foreground mb-8 max-w-3xl mx-auto">
+            {description}
+          </p>
+        )}
+        
+        {/* Rich Content */}
+        {content && (
+          <div className="prose prose-lg max-w-none mb-8">
+            <RichText content={content} />
+          </div>
+        )}
+        
+        {/* Media */}
+        {media && (
+          <Media 
+            resource={media} 
+            className="rounded-xl shadow-lg mb-8"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        )}
+        
+        {/* CTAs */}
+        {(primaryCTA || secondaryCTA) && (
+          <div className="flex flex-wrap gap-4 justify-center items-center">
+            {primaryCTA && <CMSLink {...primaryCTA} variant="default" />}
+            {secondaryCTA && <CMSLink {...secondaryCTA} variant="outline" />}
+          </div>
+        )}
+        
+        {/* Array Items (Grid Layout) */}
+        {items && items.length > 0 && (
+          <div className={`
+            grid gap-6 mt-12
+            ${layout === 'two-column' ? 'grid-cols-1 md:grid-cols-2' : ''}
+            ${layout === 'three-column' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : ''}
+            ${layout === 'four-column' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4' : ''}
+          `}>
+            {items.map((item, index) => (
+              <div 
+                key={index}
+                className="p-6 rounded-lg border bg-card hover:shadow-lg transition-shadow"
+              >
+                {item.icon && (
+                  <Media resource={item.icon} className="w-12 h-12 mb-4" />
+                )}
+                {item.heading && (
+                  <h3 className="text-xl font-semibold mb-2">
+                    {item.heading}
+                  </h3>
+                )}
+                {item.description && (
+                  <p className="text-muted-foreground">
+                    {item.description}
+                  </p>
+                )}
+                {item.link && (
+                  <CMSLink {...item.link} className="mt-4" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+```
+
+**config.ts Template:**
+```typescript
+import { Block } from 'payload/types'
+
+export const {ComponentName}Block: Block = {
+  slug: '{category}{componentName}',
+  labels: {
+    singular: '{ComponentName}',
+    plural: '{ComponentName} Blöcke',
+  },
+  interfaceName: '{ComponentName}Block',
+  imageURL: '/icons/blocks/{category}/{componentName}.svg',
+  fields: [
+    // Tagline
+    {
+      name: 'tagline',
+      type: 'text',
+      label: 'Tagline',
+      admin: {
+        description: 'Kleine Überschrift über dem Titel (optional)',
+      },
+    },
+    // Titel
+    {
+      name: 'title',
+      type: 'text',
+      label: 'Titel',
+      admin: {
+        description: 'Hauptüberschrift des Blocks',
+      },
+    },
+    // Description
+    {
+      name: 'description',
+      type: 'textarea',
+      label: 'Beschreibung',
+      admin: {
+        description: 'Kurze Beschreibung unter dem Titel',
+      },
+    },
+    // Rich Content
+    {
+      name: 'content',
+      type: 'richText',
+      label: 'Inhalt',
+      admin: {
+        description: 'Formatierter Text-Inhalt',
+      },
+    },
+    // Media
+    {
+      name: 'media',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Medien',
+      admin: {
+        description: 'Bild oder Video',
+      },
+    },
+    // Background Image
+    {
+      name: 'backgroundImage',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Hintergrundbild',
+      admin: {
+        description: 'Hintergrundbild für den gesamten Block',
+      },
+    },
+    // Primary CTA
+    {
+      name: 'primaryCTA',
+      type: 'group',
+      label: 'Haupt-Button',
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          label: 'Button-Text',
+        },
+        {
+          name: 'url',
+          type: 'text',
+          label: 'URL',
+        },
+        {
+          name: 'type',
+          type: 'select',
+          label: 'Typ',
+          options: [
+            { label: 'Interner Link', value: 'internal' },
+            { label: 'Externer Link', value: 'external' },
+          ],
+        },
+        {
+          name: 'newTab',
+          type: 'checkbox',
+          label: 'In neuem Tab öffnen',
+        },
+      ],
+    },
+    // Secondary CTA
+    {
+      name: 'secondaryCTA',
+      type: 'group',
+      label: 'Zweiter Button',
+      fields: [
+        {
+          name: 'label',
+          type: 'text',
+          label: 'Button-Text',
+        },
+        {
+          name: 'url',
+          type: 'text',
+          label: 'URL',
+        },
+      ],
+    },
+    // Array Items
+    {
+      name: 'items',
+      type: 'array',
+      label: 'Elemente',
+      labels: {
+        singular: 'Element',
+        plural: 'Elemente',
+      },
+      admin: {
+        description: 'Wiederholbare Elemente (Features, Leistungen, etc.)',
+      },
+      fields: [
+        {
+          name: 'icon',
+          type: 'upload',
+          relationTo: 'media',
+          label: 'Icon',
+        },
+        {
+          name: 'heading',
+          type: 'text',
+          label: 'Überschrift',
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          label: 'Beschreibung',
+        },
+        {
+          name: 'link',
+          type: 'group',
+          label: 'Link',
+          fields: [
+            {
+              name: 'label',
+              type: 'text',
+              label: 'Link-Text',
+            },
+            {
+              name: 'url',
+              type: 'text',
+              label: 'URL',
+            },
+          ],
+        },
+      ],
+    },
+    // Layout Options
+    {
+      name: 'layout',
+      type: 'select',
+      label: 'Layout',
+      options: [
+        { label: 'Eine Spalte', value: 'one-column' },
+        { label: 'Zwei Spalten', value: 'two-column' },
+        { label: 'Drei Spalten', value: 'three-column' },
+        { label: 'Vier Spalten', value: 'four-column' },
+      ],
+      defaultValue: 'two-column',
+      admin: {
+        description: 'Layout für wiederholbare Elemente',
+      },
+    },
+    {
+      name: 'alignment',
+      type: 'select',
+      label: 'Ausrichtung',
+      options: [
+        { label: 'Links', value: 'left' },
+        { label: 'Zentriert', value: 'center' },
+        { label: 'Rechts', value: 'right' },
+      ],
+      defaultValue: 'left',
+    },
+    {
+      name: 'backgroundColor',
+      type: 'select',
+      label: 'Hintergrundfarbe',
+      options: [
+        { label: 'Standard', value: 'background' },
+        { label: 'Muted', value: 'muted' },
+        { label: 'Card', value: 'card' },
+        { label: 'Primary', value: 'primary' },
+      ],
+      defaultValue: 'background',
+    },
+  ],
+  admin: {
+    group: '{Category}',
+    description: 'Aus Relume-Template generiert',
+  },
+}
+```
+
+**index.ts Template:**
+```typescript
+export { {ComponentName} } from './Component'
+export { {ComponentName}Block } from './config'
+```
+
+---
+
+#### Batch 2: Content Components (Medium Priority)
+**Kategorien:** MultistepForms, Gallery, Team, Banners, FAQ, ContactModal
+**Komponenten-Anzahl:** 46 + 27 + 22 + 16 + 14 + 6 = 131
+**Geschätzte Dauer:** ~3 Minuten
+**Verwendung:** Formulare, Galerien, Team-Seiten, Benachrichtigungen
+
+```typescript
+async function generateBatch2() {
+  const mediumPriorityCategories = [
+    'MultistepForms', 'Gallery', 'Team', 
+    'Banners', 'FAQ', 'ContactModal'
+  ]
+  
+  for (const category of mediumPriorityCategories) {
+    console.log(`\n📦 Generiere ${category}...`)
+    await generateCategoryBlocks(category)
+  }
+}
+```
+
+---
+
+#### Batch 3: Specialized Components (Low Priority)
+**Kategorien:** Timelines, Comparison, EventHeaderItems, EventHeaders, Logo, Loader
+**Komponenten-Anzahl:** 21 + 15 + 11 + 6 + 6 + 5 = 64
+**Geschätzte Dauer:** ~2 Minuten
+**Verwendung:** Spezielle Darstellungen, Vergleiche, Event-Übersichten
+
+```typescript
+async function generateBatch3() {
+  const lowPriorityCategories = [
+    'Timelines', 'Comparison', 'EventHeaderItems', 
+    'EventHeaders', 'Logo', 'Loader'
+  ]
+  
+  for (const category of lowPriorityCategories) {
+    console.log(`\n📦 Generiere ${category}...`)
+    await generateCategoryBlocks(category)
+  }
+}
+```
+
+---
+
+### PHASE 3: Zentrale Registrierung (Dauer: ~2 Min)
+
+#### Schritt 3.1: Blocks Index generieren
+```typescript
+// src/blocks/index.ts
+
+// Automatisch generierte Exports (1243 Zeilen)
+
+// Layout Blocks (527)
+export { Layout1, Layout1Block } from './Layout/Layout1'
+export { Layout2, Layout2Block } from './Layout/Layout2'
+// ... (525 weitere)
+
+// Header Blocks (152)
+export { Header1, Header1Block } from './Header/Header1'
+export { Header2, Header2Block } from './Header/Header2'
+// ... (150 weitere)
+
+// CTA Blocks (58)
+export { CTA1, CTA1Block } from './CTA/CTA1'
+// ... (57 weitere)
+
+// MultistepForms Blocks (46)
+export { Form1, Form1Block } from './MultistepForms/Form1'
+// ... (45 weitere)
+
+// ... (alle anderen 20 Kategorien, OHNE Blog, Career, Events, Portfolio)
+```
+
+#### Schritt 3.2: Pages Collection aktualisieren
+```typescript
+// src/collections/Pages/config.ts
+
+import {
+  // Layout Blocks
+  Layout1Block, Layout2Block, /* ... alle 527 */,
+  
+  // Header Blocks
+  Header1Block, Header2Block, /* ... alle 152 */,
+  
+  // ... (alle anderen 1243+ Blocks)
+} from '@/blocks'
+
+export const Pages: CollectionConfig = {
+  slug: 'pages',
+  fields: [
+    {
+      name: 'layout',
+      type: 'blocks',
+      label: 'Seitenaufbau',
+      admin: {
+        description: 'Erstelle deine Seite mit 1243+ verfügbaren Blöcken',
+      },
+      blocks: [
+        // Alle 1243+ Blocks registrieren
+        Layout1Block,
+        Layout2Block,
+        // ... (alle anderen)
+      ],
+    },
+  ],
+}
+```
+
+#### Schritt 3.3: PageRenderer erweitern
+```typescript
+// src/components/PageRenderer/index.tsx
+
+import {
+  Layout1, Layout2, /* ... alle 527 */,
+  Header1, Header2, /* ... alle 152 */,
+  Blog1, Blog2, /* ... alle 68 */,
+  // ... (alle anderen 1243+ Komponenten)
+} from '@/blocks'
+
+const blockComponents = {
+  // Layout
+  'layoutLayout1': Layout1,
+  'layoutLayout2': Layout2,
+  // ... (alle 527)
+  
+  // Header
+  'headerHeader1': Header1,
+  'headerHeader2': Header2,
+  // ... (alle 152)
+  
+  // ... (alle anderen 1243+ Komponenten)
+}
+
+export const PageRenderer: React.FC<PageRendererProps> = ({ blocks }) => {
+  return (
+    <div className="page-content">
+      {blocks?.map((block, index) => {
+        const BlockComponent = blockComponents[block.blockType]
+        
+        if (!BlockComponent) {
+          console.warn(`[PageRenderer] Block type "${block.blockType}" not found`)
+          return null
+        }
+        
+        return (
+          <BlockComponent 
+            key={`${block.blockType}-${index}`} 
+            block={block} 
+          />
+        )
+      })}
+    </div>
+  )
+}
+```
+
+---
+
+### PHASE 4: Validierung & Testing (Dauer: ~5 Min)
+
+#### Schritt 4.1: TypeScript Validierung
+```bash
+npm run type-check
+# Sollte ohne Fehler durchlaufen
+```
+
+**Bei Fehlern:**
+```typescript
+// Automatische Fehlerkorrektur
+if (typeErrors.length > 0) {
+  console.warn(`⚠️ ${typeErrors.length} TypeScript-Fehler gefunden`)
+  
+  for (const error of typeErrors) {
+    // Automatische Korrektur von häufigen Fehlern
+    if (error.includes('Property does not exist')) {
+      await fixMissingProperty(error)
+    }
+    if (error.includes('Type mismatch')) {
+      await fixTypeMismatch(error)
+    }
+  }
+  
+  // Erneute Validierung
+  await runTypeCheck()
+}
+```
+
+#### Schritt 4.2: Build-Test
+```bash
+npm run build
+```
+
+**Performance-Check:**
+```typescript
+// Bundle-Size Analyse
+const bundleSize = await analyzeBundleSize()
+
+console.log('📦 Bundle-Größe:')
+console.log(`   - Client: ${bundleSize.client}`)
+console.log(`   - Server: ${bundleSize.server}`)
+console.log(`   - Shared: ${bundleSize.shared}`)
+
+// Warnung bei zu großem Bundle
+if (bundleSize.client > 500_000) {
+  console.warn('⚠️ Client-Bundle zu groß, optimiere Code-Splitting')
+}
+```
+
+#### Schritt 4.3: Admin-Panel Test
+```bash
+npm run dev
+# Öffne http://localhost:3000/admin
+```
+
+**Validierung:**
+- [ ] Alle 1243+ Blocks im Layout-Builder sichtbar
+- [ ] Deutsche Labels korrekt
+- [ ] Gruppierung nach Kategorien funktioniert
+- [ ] Preview-Icons werden angezeigt
+- [ ] Keine Duplikate
+
+#### Schritt 4.4: Frontend-Rendering Test
+```typescript
+// Teste Random Sample (10% der Blocks)
+const sampleSize = Math.floor(allBlocks.length * 0.1)
+const randomBlocks = shuffle(allBlocks).slice(0, sampleSize)
+
+for (const block of randomBlocks) {
+  try {
+    render(<BlockComponent blockType={block.slug} block={mockData} />)
+    console.log(`✅ ${block.slug} rendert korrekt`)
+  } catch (error) {
+    console.error(`❌ ${block.slug} Rendering-Fehler:`, error)
+  }
+}
+```
+
+---
+
+### PHASE 5: Dokumentation & Abschluss (Dauer: ~1 Min)
+
+#### Schritt 5.1: Dokumentation generieren
+```markdown
+# PayloadCMS Blocks - Vollständige Übersicht
+
+Generiert am: ${new Date().toISOString()}
+
+## 📊 Statistiken
+
+- **Kategorien:** 26
+- **Komponenten:** 1243
+- **Generierte Dateien:** 3729
+- **TypeScript Errors:** 0
+- **Bundle-Größe:** ${bundleSize}
+
+## 📦 Kategorien
+
+### 1. Layout (527 Blocks)
+${layoutBlocks.map(b => `- \`${b.slug}\`: ${b.description}`).join('\n')}
+
+### 2. Header (152 Blocks)
+${headerBlocks.map(b => `- \`${b.slug}\`: ${b.description}`).join('\n')}
+
+... (alle anderen Kategorien)
+
+## 🚀 Verwendung
+
+### Im Admin-Panel
+1. Gehe zu Pages → Neue Seite
+2. Klicke auf "Block hinzufügen"
+3. Wähle aus 1243+ verfügbaren Blocks
+
+### Im Code
+\`\`\`typescript
+import { Layout1, Header1, Blog1 } from '@/blocks'
+\`\`\`
+
+## 🎨 Anpassungen
+
+Alle Blocks können angepasst werden unter:
+- \`src/blocks/{Category}/{ComponentName}/Component.tsx\`
+- \`src/blocks/{Category}/{ComponentName}/config.ts\`
+```
+
+#### Schritt 5.2: Success Message
+```
+🎉 ERFOLG! Vollständige Block-Generierung abgeschlossen!
+
+📊 Zusammenfassung:
+   ✅ 20 Kategorien verarbeitet (für statische Pages)
+   ✅ 1071 Komponenten konvertiert
+   ✅ 3213 Dateien erstellt
+   ✅ Alle Blocks registriert
+   ✅ TypeScript-Validierung bestanden
+   ✅ Build erfolgreich
+   ✅ Deutsche UX implementiert
+
+❌ Ausgeschlossen (separate Module):
+   - Blog (68) → Blog-Modul
+   - BlogPostHeader (5) → Blog-Modul
+   - Career (27) → Service-/Angebotsmodul
+   - Events (37) → Projektmodul
+   - Portfolio (23) → Projektmodul
+   - PortfolioHeader (12) → Projektmodul
+   = 172 Komponenten für separate Module reserviert
+
+📁 Generierte Dateien:
+   - src/blocks/{Category}/{ComponentName}/Component.tsx (1071x)
+   - src/blocks/{Category}/{ComponentName}/config.ts (1071x)
+   - src/blocks/{Category}/{ComponentName}/index.ts (1071x)
+   - src/blocks/index.ts (zentrale Exports)
+   - BLOCKS_DOCUMENTATION.md (Übersicht)
+
+🚀 Nächste Schritte:
+   1. Öffne http://localhost:3000/admin
+   2. Erstelle eine neue Page (z.B. /angebote, /team, /preise)
+   3. Wähle aus 1071 Blocks für statische Seiten
+   4. Baue deine Website!
+
+💡 Pro-Tipp:
+   - /angebote → Pages Collection (mit CTA, Pricing, etc.)
+   - /angebote/rasen-mähen → Separates Modul (später)
+   - Nutze die Kategorisierung im Admin-Panel
+
+✅ Bereit für Production!
+```
+
+---
+
+## 🎯 Ausführung
+
+**Starte die vollständige Bulk-Generierung:**
+```
+cursor> Generate ALL Relume Blocks - Master Orchestrator
+```
+
+**Oder schrittweise:**
+```typescript
+// Phase 1: Analyse
+await analyzeRelumeStructure()
+
+// Phase 2: Batch-Generierung
+await generateBatch1() // Critical Components
+await generateBatch2() // Content Components
+await generateBatch3() // Specialized Components
+
+// Phase 3: Registrierung
+await registerAllBlocks()
+
+// Phase 4: Validierung
+await validateAndTest()
+
+// Phase 5: Dokumentation
+await generateDocumentation()
+```
+
+---
+
+## 📈 Performance-Optimierung
+
+### Code-Splitting
+```typescript
+// Lazy-Load Blocks im PageRenderer
+const blockComponents = {
+  'layoutLayout1': React.lazy(() => import('@/blocks/Layout/Layout1')),
+  // ... (alle anderen)
+}
+
+// Mit Suspense wrapper
+<Suspense fallback={<BlockSkeleton />}>
+  <BlockComponent {...props} />
+</Suspense>
+```
+
+### Bundle-Optimierung
+```javascript
+// next.config.js
+
+module.exports = {
+  webpack: (config) => {
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          blocks: {
+            test: /[\\/]src[\\/]blocks[\\/]/,
+            name: 'blocks',
+            priority: 10,
+          },
+        },
+      },
+    }
+    return config
+  },
+}
+```
+
+---
+
+✅ **Vollständige Optimierung für maximale Erfassung aller Figma- & Relume-Komponenten!**

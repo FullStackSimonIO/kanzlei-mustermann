@@ -7,38 +7,366 @@ alwaysApply: true
 ## Architektur
 
 - Projekt nutzt **Next.js + PayloadCMS + Tailwind + ShadCN/UI**.
-- Jede Figma-Komponente aus dem Relume-Template wird als eigener **Payload Block** umgesetzt.
+- **ALLE** Figma-Komponenten und Relume-Templates werden als eigene **Payload Blocks** umgesetzt.
 - Deutsche UX im Admin Panel ist Pflicht (alle Labels, Beschreibungen, Feldnamen auf Deutsch).
+- **Vollständige Erfassung:** Keine Komponenten auslassen (inkl. Hero, Navbar, Footer, etc.)
 
 ## Dateistruktur
 
-- `src/blocks/{BlockName}/config.ts` → Payload Config
-- `src/components/blocks/{BlockName}/Component.tsx` → React Komponente
+- `src/blocks/{Category}/{BlockName}/Component.tsx` → React Komponente
+- `src/blocks/{Category}/{BlockName}/config.ts` → Payload Config
+- `src/blocks/{Category}/{BlockName}/index.ts` → Exports
+- `src/blocks/index.ts` → Zentrale Export-Datei für alle Blocks
 - `src/collections/{CollectionName}/config.ts` → Collections
 - `src/fields/{FieldName}.ts` → Custom Fields
 - Alle Dateien in TypeScript.
 
+## Kategorie-basierte Organisation
+
+Alle Blocks werden nach Kategorien organisiert (basierend auf Relume-Struktur):
+
+### Kategorien für Pages Collection (20):
+1. **Layout** (527 Komponenten) - Basis-Layouts, Container, Grids
+2. **Header** (152 Komponenten) - Hero Sections, Hero-Varianten
+3. **CTA** (58 Komponenten) - Call-to-Action Sections
+4. **MultistepForms** (46 Komponenten) - Mehrstufige Formulare
+5. **Testimonials** (43 Komponenten) - Kundenbewertungen
+6. **Contact** (30 Komponenten) - Kontaktformulare
+7. **Gallery** (27 Komponenten) - Bild-/Video-Galerien
+8. **Pricing** (27 Komponenten) - Preistabellen
+9. **Navbar** (22 Komponenten) - Navigationsleisten
+10. **Team** (22 Komponenten) - Team-Sections
+11. **Timelines** (21 Komponenten) - Zeitstrahl-Darstellungen
+12. **Footer** (17 Komponenten) - Footer-Varianten
+13. **Banners** (16 Komponenten) - Notification-Banner
+14. **Comparison** (15 Komponenten) - Vergleichstabellen
+15. **FAQ** (14 Komponenten) - FAQ-Sections
+16. **EventHeaderItems** (11 Komponenten) - Event-Header (Übersicht)
+17. **EventHeaders** (6 Komponenten) - Event-Hero (Übersicht)
+18. **ContactModal** (6 Komponenten) - Kontakt-Modals
+19. **Logo** (6 Komponenten) - Logo-Displays
+20. **Loader** (5 Komponenten) - Loading States
+
+**Gesamt:** 1071 Komponenten
+
+### ❌ Ausgeschlossen (Separate Module):
+- **Blog** (68) + **BlogPostHeader** (5) → Blog-Modul mit `/blog/[slug]`
+- **Career** (27) → Service-/Angebotsmodul mit `/angebote/[slug]`
+- **Events** (37) + **Portfolio** (23) + **PortfolioHeader** (12) → Projektmodul mit `/projekte/[slug]`
+
+**Ausgeschlossen:** 172 Komponenten (für separate Prompts)
+
 ## Entwicklungsworkflow
 
-1. Farben & Fonts aus Figma importieren → Tailwind anpassen
-2. CMSLink-Komponente erstellen (mit ShadCN Buttons)
-3. Navbar + Footer entwickeln und in Payload registrieren
-4. Hero Section aus der Pages Collection bauen
-5. Alle Figma-Blöcke als Payload-Blöcke umsetzen
-6. Payload Configs in Deutsch beschriften
-7. PageRenderer.tsx anpassen für dynamisches Rendering
+### 1. Vollständige Erfassung
+- Figma-File über MCP komplett scannen
+- ALLE Komponenten erfassen (ohne Ausschlüsse)
+- Mapping zu Relume-Komponenten erstellen
+
+### 2. Design-System Setup
+- Farben & Fonts aus Figma importieren → Tailwind anpassen
+- CMSLink-Komponente erstellen (mit ShadCN Buttons)
+- Basis-Komponenten (RichText, Media, CMSLink) bereitstellen
+
+### 3. Systematische Block-Generierung
+- Batch-Generierung nach Priorität:
+  - **High Priority:** Layout, Header, CTA, Testimonials, Contact, Pricing, Navbar, Footer
+  - **Medium Priority:** Blog, MultistepForms, Gallery, Team, Banners, FAQ
+  - **Low Priority:** Events, Career, Portfolio, Timelines, Comparison, etc.
+- Pro Block generieren: Component.tsx, config.ts, index.ts
+
+### 4. Automatische Registrierung
+- Zentrale `src/blocks/index.ts` generieren mit allen Exports
+- Pages Collection erweitern mit allen Block-Typen
+- PageRenderer mit allen Komponenten erweitern
+
+### 5. Payload Configs
+- Alle Configs mit deutschem UX
+- Kategorisierung im Admin-Panel über `admin.group`
+- Suchbare Block-Namen und Beschreibungen
+
+### 6. Testing & Validierung
+- TypeScript-Validierung
+- Build-Test
+- Admin-Panel Test (alle Blocks sichtbar)
+- Frontend-Rendering Test
 
 ## Block-Konvention
 
-- Jeder Block kann bestehen aus: `title`, `content (RichText)`, `media`, `cta (CMSLink)`, `tagline (ShadCN Badge)`
-- CMSLink enthält: `label`, `type`, `url`, `newTab`
-- Blöcke werden in der `Pages` Collection über das Feld `layout` eingefügt
-- RichText-Felder erhalten ShadCN Styling
+### Standard-Felder (für alle Blocks):
+```typescript
+{
+  // Basis
+  tagline: string         // Optional, ShadCN Badge
+  title: string           // Hauptüberschrift
+  description: string     // Kurzbeschreibung
+  content: RichText       // Formatierter Inhalt
+  
+  // Media
+  media: Upload           // Haupt-Medien (Bild/Video)
+  backgroundImage: Upload // Hintergrundbild
+  icon: Upload            // Icon/Logo
+  
+  // CTAs
+  primaryCTA: CMSLink     // Haupt-Button
+  secondaryCTA: CMSLink   // Zweiter Button
+  
+  // Arrays (wiederholbare Elemente)
+  items: Array<{
+    icon?: Upload
+    heading?: string
+    description?: string
+    link?: CMSLink
+  }>
+  
+  // Layout-Optionen
+  layout: 'one-column' | 'two-column' | 'three-column' | 'four-column'
+  alignment: 'left' | 'center' | 'right'
+  backgroundColor: 'background' | 'muted' | 'card' | 'primary'
+}
+```
+
+### CMSLink-Struktur:
+```typescript
+{
+  label: string           // Button-/Link-Text
+  type: 'internal' | 'external' | 'email' | 'phone'
+  url: string             // Ziel-URL
+  newTab: boolean         // In neuem Tab öffnen
+}
+```
+
+### Block-Registrierung:
+```typescript
+// Slug-Format: {category}{ComponentName} (camelCase)
+slug: 'layoutLayout1'     // Layout/Layout1
+slug: 'headerHeader1'     // Header/Header1
+slug: 'blogBlogGrid'      // Blog/BlogGrid
+
+// Labels (deutsch)
+labels: {
+  singular: 'Layout 1',
+  plural: 'Layout 1 Blöcke',
+}
+
+// Gruppierung
+admin: {
+  group: 'Layout',        // Kategorie im Admin-Panel
+  description: '...',     // Deutsche Beschreibung
+}
+```
+
+## Automatische Block-Registrierung
+
+### 1. Zentrale Export-Datei
+```typescript
+// src/blocks/index.ts (automatisch generiert)
+
+// Layout Blocks
+export { Layout1, Layout1Block } from './Layout/Layout1'
+export { Layout2, Layout2Block } from './Layout/Layout2'
+// ... (alle 527)
+
+// Header Blocks
+export { Header1, Header1Block } from './Header/Header1'
+// ... (alle 152)
+
+// ... (alle weiteren Kategorien)
+
+// Gesamt: 1243+ Exports
+```
+
+### 2. Pages Collection Auto-Import
+```typescript
+// src/collections/Pages/config.ts
+
+import {
+  // Automatische Imports (1243+ Blocks)
+  Layout1Block, Layout2Block, /* ... */,
+  Header1Block, Header2Block, /* ... */,
+  // ... alle anderen
+} from '@/blocks'
+
+// Automatisches Array (1243+ Blocks)
+blocks: [
+  Layout1Block,
+  Layout2Block,
+  // ... alle anderen
+]
+```
+
+### 3. PageRenderer Auto-Mapping
+```typescript
+// src/components/PageRenderer/index.tsx
+
+import {
+  // Automatische Imports (1243+ Komponenten)
+  Layout1, Layout2, /* ... */,
+  Header1, Header2, /* ... */,
+  // ... alle anderen
+} from '@/blocks'
+
+const blockComponents = {
+  // Automatisches Mapping (1243+ Einträge)
+  'layoutLayout1': Layout1,
+  'layoutLayout2': Layout2,
+  // ... alle anderen
+}
+```
 
 ## Coding Style
 
-- TypeScript strict mode aktiv
-- Imports alphabetisch sortiert
-- Props mit Interfaces typisieren
-- Kommentare und UX-Texte auf Deutsch
-- Kein Inline-CSS
+- **TypeScript strict mode aktiv**
+- **Imports alphabetisch sortiert**
+- **Props mit Interfaces typisieren**
+- **Kommentare und UX-Texte auf Deutsch**
+- **Kein Inline-CSS** (nur Tailwind-Klassen)
+- **Responsive Design** (mobile-first mit Tailwind Breakpoints)
+- **Accessibility** (ARIA-Labels, Keyboard-Navigation, Screen-Reader Support)
+- **Performance** (Lazy-Loading, Code-Splitting, optimierte Bilder)
+
+## Naming Conventions
+
+### Dateien:
+- Komponenten: `Component.tsx` (immer gleich)
+- Configs: `config.ts` (immer gleich)
+- Index: `index.ts` (immer gleich)
+
+### Komponenten:
+- React-Komponenten: PascalCase (z.B. `Layout1`, `Header1`)
+- Props-Interfaces: `{ComponentName}Props` (z.B. `Layout1Props`)
+- Block-Types: `{ComponentName}Block` (z.B. `Layout1Block`)
+
+### Block-Slugs:
+- Format: `{category}{ComponentName}` (camelCase)
+- Beispiele: `layoutLayout1`, `headerHero1`, `blogPostGrid`
+
+### CSS-Klassen:
+- Tailwind-Utilities bevorzugen
+- Custom-Klassen nur wenn nötig
+- BEM-Notation für Custom-Klassen
+
+## Performance-Optimierungen
+
+### Code-Splitting:
+```typescript
+// Lazy-Loading für Blocks
+const blockComponents = {
+  'layoutLayout1': React.lazy(() => import('@/blocks/Layout/Layout1')),
+  // ... (alle anderen)
+}
+
+// Mit Suspense
+<Suspense fallback={<BlockSkeleton />}>
+  <BlockComponent {...props} />
+</Suspense>
+```
+
+### Bundle-Optimierung:
+```javascript
+// next.config.js
+webpack: (config) => {
+  config.optimization.splitChunks = {
+    cacheGroups: {
+      blocks: {
+        test: /[\\/]src[\\/]blocks[\\/]/,
+        name: 'blocks',
+        chunks: 'all',
+      },
+    },
+  }
+  return config
+}
+```
+
+### Image-Optimierung:
+```tsx
+// Next.js Image für alle Medien
+import Image from 'next/image'
+
+<Image
+  src={media.url}
+  alt={media.alt}
+  width={media.width}
+  height={media.height}
+  sizes="(max-width: 768px) 100vw, 50vw"
+  priority={isAboveFold}
+/>
+```
+
+## Figma MCP Integration
+
+### Vollständige Erfassung:
+- **ALLE** Seiten im Figma-File scannen
+- **ALLE** Komponenten-Typen erfassen (FRAME, COMPONENT, INSTANCE, etc.)
+- **Keine Ausschlüsse** (Hero, Navbar, Footer werden NICHT übersprungen)
+- **Rekursive Erfassung** aller Ebenen
+
+### Component-Analysis:
+- Layout-Struktur (Flexbox, Grid, Spacing)
+- Farben & Typografie
+- Media-Elemente
+- Interaktive Elemente
+- Responsive Breakpoints
+
+### Mapping-Strategie:
+1. Exact Name Match
+2. Case-insensitive Match
+3. Partial Match (ohne Sonderzeichen)
+4. Category Match (basierend auf Seiten-Namen)
+
+## Validierung & Testing
+
+### TypeScript:
+```bash
+npm run type-check  # Muss ohne Fehler durchlaufen
+```
+
+### Build:
+```bash
+npm run build       # Production Build testen
+```
+
+### Bundle-Size:
+```bash
+npm run analyze     # Bundle-Größe analysieren
+# Ziel: < 500KB für Block-System
+```
+
+### Admin-Panel:
+- Alle 1243+ Blocks sichtbar
+- Deutsche Labels korrekt
+- Gruppierung funktioniert
+- Suche funktioniert
+- Preview-Icons werden angezeigt
+
+### Frontend:
+- Alle Blocks rendern korrekt
+- Responsive auf allen Breakpoints
+- Accessibility-Tests bestehen
+- Performance-Metriken erfüllt (LCP < 2.5s, TTI < 3.8s)
+
+## Dokumentation
+
+### Block-Dokumentation:
+Für jeden Block automatisch generieren:
+- Beschreibung
+- Verwendungszweck
+- Feld-Erklärungen
+- Screenshot/Preview
+- Beispiel-Daten
+
+### API-Dokumentation:
+- Props-Interfaces dokumentieren
+- TypeScript-Types exportieren
+- JSDoc-Kommentare für Funktionen
+
+### User-Guide:
+- Admin-Panel Anleitung (deutsch)
+- Block-Auswahl Guide
+- Best Practices
+- Troubleshooting
+
+---
+
+✅ **Optimiert für vollständige Erfassung aller Figma-Komponenten und automatische Block-Generierung!**
