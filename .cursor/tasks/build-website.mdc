@@ -378,12 +378,7 @@ console.log('📊 Progress: 80% (4/5 Phasen)');
 
 **Erwartete Ausgabe:**
 ```
-✅ Hero-Varianten erstellt:
-   - Hero mit Bild rechts
-   - Hero mit Hintergrundbild
-   - Hero mit Video
-   - Hero mit animierten Elementen
-   - Hero für Landing Pages
+✅ Alle Hero-Varianten aus dem Figma Design erstellt:
 ✅ src/heroes/index.tsx erstellt
 ✅ Responsive für alle Breakpoints
 ✅ Performance-Optimierung (lazy loading, WebP)
@@ -447,6 +442,31 @@ await clearContext({
 
 console.log('🧹 Context geleert - Phase 5 abgeschlossen');
 console.log('📊 Progress: 100% (5/5 Phasen)');
+```
+
+---
+
+### PHASE 6: Payload Sections
+**Geschätzter Zeitbedarf: 15-20 Minuten**
+
+#### Schritt 6.1: PayloadCMS Blocks bauen
+```bash
+# Führe aus: build-blocks-full
+> Alle Komponenten aus Figma extrahiert
+> Verschiedene Blocks erfolgreich generiert
+> Responsive Images konfiguriert
+> Call-to-Action Buttons integriert
+```
+
+**Erwartete Ausgabe:**
+```
+✅ Alle Blocks aus dem Figma Design erstellt:
+✅ src/blocks/{blockCategory}/{blockName}Component.tsx erstellt
+✅ src/blocks/{blockCategory}/{blockName}config.ts erstellt
+✅ src/blocks/{blockCategory}/{blockName}index.ts erstellt
+✅ Responsive für alle Breakpoints
+✅ Performance-Optimierung (lazy loading, WebP)
+✅ SEO-Optimierung (Schema.org, Meta-Tags)
 ```
 
 ---
@@ -582,10 +602,17 @@ Generiert: ${new Date().toISOString()}
 - Keyboard-Navigation
 
 ### Phase 5: Hero Sections ✅
-- 5 Hero-Varianten
+- Alle Hero-Varianten von Figma mit dem Namen `Header` darin
 - Responsive Images
 - Performance-Optimierung
 - SEO-Optimierung
+
+### Phase 6: Payload Blocks ✅
+- Alle Komponenten von Figma abgesehen von `Header`, `Navbar`, `Nav`, `Navigation`, `Footer`
+- Responsive Images
+- Performance-Optimierung
+- SEO-Optimierung
+
 
 ## 📈 Metriken
 

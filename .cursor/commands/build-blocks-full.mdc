@@ -260,7 +260,7 @@ export const {ComponentName}: React.FC<{ComponentName}Props> = ({ block }) => {
         {title && <h2 className="text-3xl md:text-4xl font-bold mb-6">{title}</h2>}
         {content && <RichText content={content} className="mb-8" />}
         {media && <Media resource={media} className="rounded-xl shadow-lg" />}
-        {cta && <CMSLink {...cta} className="mt-8" />}
+        {cta && <CMSLink {...cta} fill className="mt-8" />}
         
         {/* Array-Felder für wiederholbare Elemente */}
         {items && items.length > 0 && (
