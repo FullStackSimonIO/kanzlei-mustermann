@@ -1,0 +1,349 @@
+---
+description: Automatisches Fixing häufiger PayloadCMS Bugs
+---
+
+# Automatische Bug-Fixes für PayloadCMS Projekt
+
+## Häufige Bugs und deren Fixes
+
+### 1. relationTo Fehler
+
+#### Problem:
+Cursor generiert manchmal falsche relationTo Werte:
+```typescript
+// ❌ Häufige Fehler:
+relationTo: 'media.slug'
+relationTo: 'pages.slug'
+relationTo: media  // ohne Quotes
+relationTo: pages  // ohne Quotes
+```
+
+#### Lösung:
+```typescript
+// ✅ Korrekt:
+relationTo: 'media'
+relationTo: 'pages'
+relationTo: 'categories'
+relationTo: 'posts'
+```
+
+#### Auto-Fix Regex:
+```bash
+# Pattern 1: Entferne .slug
+find src/ -type f -name "*.ts" -exec sed -i "s/relationTo: '\([a-z]*\)\.slug'/relationTo: '\1'/g" {} \;
+
+# Pattern 2: Füge Quotes hinzu
+find src/ -type f -name "*.ts" -exec sed -i "s/relationTo: \([a-z]*\),/relationTo: '\1',/g" {} \;
+
+# Pattern 3: Entferne doppelte Quotes
+find src/ -type f -name "*.ts" -exec sed -i "s/relationTo: ''\([a-z]*\)''/relationTo: '\1'/g" {} \;
+```
+
+### 2. Fehlende 'use client' Direktive
+
+#### Problem:
+React Client Components brauchen 'use client' am Anfang
+
+#### Betroffene Files:
+- `src/blocks/**/Component.tsx`
+- `src/heroes/**/index.tsx`
+- `src/Header/MobileNav.tsx`
+- `src/Header/DesktopNav.tsx`
+- `src/Footer/MobileFooter.tsx`
+- `src/Footer/DesktopFooter.tsx`
+
+#### Auto-Fix:
+```bash
+# Finde alle Component Files ohne 'use client'
+FILES=$(find src/ -name "Component.tsx" -o -name "index.tsx" -o -name "*Nav.tsx" -o -name "*Footer.tsx")
+
+for file in $FILES; do
+  if ! grep -q "^'use client'" "$file"; then
+    echo "Adding 'use client' to $file"
+    sed -i "1i'use client'\n" "$file"
+  fi
+done
+```
+
+### 3. Falsche Type Imports
+
+#### Problem:
+```typescript
+// ❌ FALSCH - Naming Konflikt:
+import { HeroBlock } from '@/payload-types'
+// später in Props:
+data: HeroBlock  // Konflikt mit Import!
+```
+
+#### Lösung:
+```typescript
+// ✅ KORREKT - Type Alias verwenden:
+import type { HeroBlock as HeroBlockType } from '@/payload-types'
+// in Props:
+data: HeroBlockType
+```
+
+#### Auto-Fix Pattern:
+Suche in allen Files nach:
+```bash
+grep -r "import { \(.*\)Block } from '@/payload-types'" src/
+```
+
+Ersetze mit:
+```bash
+import type { {BlockName}Block as {BlockName}BlockType } from '@/payload-types'
+```
+
+### 4. CMSLink Props Fehler
+
+#### Problem:
+```typescript
+// ❌ FALSCH:
+<CMSLink link={button.link}>
+
+// ❌ FALSCH:
+<CMSLink href={button.link.url}>
+```
+
+#### Lösung:
+```typescript
+// ✅ KORREKT - Spread Props:
+<CMSLink {...button.link}>
+  {button.text}
+</CMSLink>
+
+// ✅ KORREKT - Mit allen Props:
+<CMSLink
+  type={data.link.type}
+  url={data.link.url}
+  newTab={data.link.newTab}
+>
+  {data.text}
+</CMSLink>
+```
+
+### 5. Media Component Props
+
+#### Problem:
+```typescript
+// ❌ FALSCH:
+<Media src={data.image} />
+<Media image={data.image} />
+<img src={data.image.url} />
+```
+
+#### Lösung:
+```typescript
+// ✅ KORREKT:
+<Media resource={data.image} />
+
+// Mit className:
+<Media 
+  resource={data.image} 
+  className="w-full object-cover"
+/>
+```
+
+### 6. Button Variant Typos
+
+#### Problem:
+```typescript
+// ❌ Häufige Typos:
+variant: 'primary'  // gibt es nicht in ShadCN
+variant: 'secondary'  // gibt es nicht in ShadCN
+variant: 'outlined'  // Typo
+variant: 'text'  // gibt es nicht
+```
+
+#### Lösung:
+```typescript
+// ✅ Nur diese ShadCN Variants:
+variant: 'default'     // Standard gefüllt
+variant: 'outline'     // Mit Border
+variant: 'ghost'       // Transparent
+variant: 'link'        // Als Link
+variant: 'destructive' // Rot für Delete
+variant: 'secondary'   // Sekundär Style
+```
+
+#### Auto-Fix Config:
+In allen config.ts Files:
+```typescript
+{
+  name: 'variant',
+  type: 'select',
+  options: [
+    { label: 'Standard', value: 'default' },
+    { label: 'Outline', value: 'outline' },
+    { label: 'Ghost', value: 'ghost' },
+    { label: 'Link', value: 'link' },
+  ],
+  defaultValue: 'default',
+}
+```
+
+### 7. Missing Conditional Checks
+
+#### Problem:
+```typescript
+// ❌ Runtime Error wenn undefined:
+{data.buttons.map((button) => ...)}
+{data.features.map((feature) => ...)}
+```
+
+#### Lösung:
+```typescript
+// ✅ Safe mit Optional Chaining:
+{data.buttons?.map((button) => ...)}
+{data.buttons && data.buttons.length > 0 && (
+  <div>
+    {data.buttons.map((button) => ...)}
+  </div>
+)}
+```
+
+### 8. Import Path Errors
+
+#### Problem:
+```typescript
+// ❌ Relative Paths:
+import { Button } from '../../../components/ui/button'
+import { Media } from '../../components/Media'
+
+// ❌ Falsche Alias:
+import { Button } from 'components/ui/button'
+```
+
+#### Lösung:
+```typescript
+// ✅ Konsistente @ Alias:
+import { Button } from '@/components/ui/button'
+import { Media } from '@/components/Media'
+import { CMSLink } from '@/components/CMSLink'
+import { RichText } from '@/components/RichText'
+```
+
+## Ausführungs-Script
+
+```bash
+#!/bin/bash
+echo "🔧 Starte automatisches Bug-Fixing..."
+
+# 1. relationTo Fixes
+echo "1️⃣ Fixe relationTo Werte..."
+find src/ -type f -name "*.ts" -exec sed -i "s/relationTo: '\([a-z]*\)\.slug'/relationTo: '\1'/g" {} \;
+find src/ -type f -name "*.ts" -exec sed -i "s/relationTo: \([a-z]*\),/relationTo: '\1',/g" {} \;
+
+# 2. 'use client' hinzufügen
+echo "2️⃣ Füge 'use client' hinzu..."
+for file in $(find src/blocks src/heroes src/Header src/Footer -name "*.tsx"); do
+  if ! grep -q "^'use client'" "$file" && grep -q "React" "$file"; then
+    sed -i "1i'use client'\n" "$file"
+    echo "  ✅ Fixed: $file"
+  fi
+done
+
+# 3. Type Import Checks
+echo "3️⃣ Prüfe Type Imports..."
+grep -r "import { .*Block } from '@/payload-types'" src/ --include="*.tsx" || echo "  ✅ Keine Import-Konflikte"
+
+# 4. CMSLink Props Check
+echo "4️⃣ Prüfe CMSLink Verwendung..."
+BAD_CMS_LINK=$(grep -r "<CMSLink link=" src/ --include="*.tsx" || true)
+if [ ! -z "$BAD_CMS_LINK" ]; then
+  echo "  ⚠️  Gefunden: <CMSLink link=... → Bitte zu <CMSLink {...link}> ändern"
+  echo "$BAD_CMS_LINK"
+fi
+
+# 5. Media Component Check
+echo "5️⃣ Prüfe Media Komponente..."
+BAD_MEDIA=$(grep -r "<Media src=\|<Media image=" src/ --include="*.tsx" || true)
+if [ ! -z "$BAD_MEDIA" ]; then
+  echo "  ⚠️  Gefunden: <Media src/image=... → Bitte zu <Media resource=... ändern"
+  echo "$BAD_MEDIA"
+fi
+
+# 6. Button Variant Check
+echo "6️⃣ Prüfe Button Variants..."
+BAD_VARIANTS=$(grep -r "variant: ['\"]primary\|variant: ['\"]secondary\|variant: ['\"]text" src/ --include="*.tsx" || true)
+if [ ! -z "$BAD_VARIANTS" ]; then
+  echo "  ⚠️  Ungültige Button Variants gefunden"
+  echo "$BAD_VARIANTS"
+fi
+
+# 7. Optional Chaining Check
+echo "7️⃣ Prüfe fehlende Optional Chaining..."
+MISSING_OPTIONAL=$(grep -r "data\.\w*\.map(" src/ --include="*.tsx" | grep -v "?" || true)
+if [ ! -z "$MISSING_OPTIONAL" ]; then
+  echo "  ⚠️  Möglicherweise fehlendes Optional Chaining:"
+  echo "$MISSING_OPTIONAL"
+fi
+
+echo ""
+echo "✅ Automatisches Bug-Fixing abgeschlossen!"
+echo ""
+echo "Bitte manuell prüfen:"
+echo "- CMSLink Props (Punkt 4)"
+echo "- Media Component Props (Punkt 5)"
+echo "- Button Variants (Punkt 6)"
+echo "- Optional Chaining (Punkt 7)"
+```
+
+## Manuelle Checks (für Cursor)
+
+Nach dem Auto-Fix Script, gehe durch folgende Files manuell:
+
+### Hero Config Check:
+```bash
+# Öffne und prüfe:
+src/heroes/config.ts
+
+# Stelle sicher:
+- Alle relationTo haben Quotes: relationTo: 'media'
+- Keine .slug Suffixe
+- Button variant options sind korrekt (default, outline, ghost, link)
+```
+
+### Block Configs Check:
+```bash
+# Für jeden Block:
+find src/blocks -name "config.ts"
+
+# Prüfe in jedem:
+- relationTo: 'media' (mit Quotes, ohne .slug)
+- relationTo: 'pages' (mit Quotes, ohne .slug)
+- Button variant options (nur ShadCN Variants)
+- Type ist 'select' für variants
+```
+
+### Component Files Check:
+```bash
+# Für jedes Component.tsx:
+find src/blocks src/heroes -name "Component.tsx" -o -name "index.tsx"
+
+# Stelle sicher:
+- Hat 'use client' am Anfang
+- <Media resource={...} /> nicht <Media src={...} />
+- <CMSLink {...link}> nicht <CMSLink link={...}>
+- data.array?.map() nicht data.array.map()
+- Import paths mit @ Alias
+```
+
+## Validierung
+
+Nach allen Fixes:
+
+```bash
+# 1. TypeScript Check
+npm run build
+
+# 2. Payload Check
+npm run dev
+
+# 3. Admin Panel öffnen
+# http://localhost:3000/admin
+# Neue Seite erstellen
+# Hero Block hinzufügen
+# Content Blocks hinzufügen
+# Speichern & Testen
+```

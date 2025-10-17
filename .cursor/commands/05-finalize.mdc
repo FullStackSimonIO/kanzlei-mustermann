@@ -1,12 +1,149 @@
 ---
-description: Projekt finalisieren, testen und mergen
+description: Projekt finalisieren, Bugs fixen, testen und mergen
 ---
 
-# Schritt 5: Finalisierung
+# Schritt 5: Finalisierung & Bug-Fixing
 
 ## Aufgaben
 
-### 1. Vollständigkeits-Check
+### 1. Automatisches Bug-Fixing
+
+#### 1.1 Common PayloadCMS Bugs fixen
+
+**WICHTIG:** Cursor soll folgende häufige Fehler automatisch korrigieren:
+
+##### Bug 1: Falsche relationTo Werte
+
+```typescript
+// ❌ FALSCH - Cursor macht manchmal:
+relationTo: 'media.slug'
+relationTo: 'pages.slug'
+relationTo: media.slug
+
+// ✅ KORREKT - Muss sein:
+relationTo: 'media'
+relationTo: 'pages'
+```
+
+**Fix-Script ausführen:**
+```bash
+echo "🔍 Prüfe relationTo Fehler..."
+
+# Finde alle .ts und .tsx Files mit falschen relationTo
+grep -r "relationTo.*\.slug" src/ --include="*.ts" --include="*.tsx" || echo "Keine relationTo.slug Fehler gefunden"
+
+# Zeige Files mit Problemen
+echo "Files mit potentiellen relationTo Problemen:"
+grep -l "relationTo" src/ --include="*.ts" --include="*.tsx" -r
+```
+
+**Manuelle Korrektur durch Cursor:**
+Gehe durch alle Config-Dateien und prüfe:
+- `src/heroes/config.ts`
+- `src/blocks/**/config.ts`
+- `src/Header/config.ts`
+- `src/Footer/config.ts`
+
+Ersetze alle Instanzen:
+```typescript
+// Pattern zu suchen und zu ersetzen:
+relationTo: 'media.slug'     → relationTo: 'media'
+relationTo: 'pages.slug'     → relationTo: 'pages'
+relationTo: media            → relationTo: 'media'
+relationTo: pages            → relationTo: 'pages'
+```
+
+##### Bug 2: Fehlende String Quotes in relationTo
+
+```typescript
+// ❌ FALSCH:
+relationTo: media
+relationTo: pages
+
+// ✅ KORREKT:
+relationTo: 'media'
+relationTo: 'pages'
+```
+
+##### Bug 3: Falsche TypeScript Imports
+
+```typescript
+// ❌ FALSCH:
+import { HeroBlock as HeroBlockType } from '@/payload-types'
+// ... aber dann verwendet als:
+data: HeroBlock  // Naming-Konflikt!
+
+// ✅ KORREKT:
+import type { HeroBlock as HeroBlockType } from '@/payload-types'
+// ... und verwenden als:
+data: HeroBlockType
+```
+
+##### Bug 4: Fehlende 'use client' Direktiven
+
+Alle Component.tsx Files brauchen:
+```typescript
+'use client'
+
+import React from 'react'
+// ... rest of imports
+```
+
+##### Bug 5: Missing CMSLink Props
+
+```typescript
+// ❌ FALSCH:
+<CMSLink link={button.link}>
+
+// ✅ KORREKT:
+<CMSLink {...button.link}>
+```
+
+#### 1.2 Automatische Suche & Replace
+
+```bash
+echo "🔧 Automatisches Bug-Fixing..."
+
+# Erstelle Backup vor Änderungen
+git add .
+git commit -m "backup: before automated bug fixes"
+
+# Suche nach häufigen Fehlern
+echo "Suche häufige PayloadCMS Fehler..."
+```
+
+```typescript
+// Führe diese Checks aus:
+
+const bugPatterns = [
+  {
+    name: 'relationTo mit .slug',
+    pattern: /relationTo:\s*['"](\w+)\.slug['"]/g,
+    fix: (match, collection) => `relationTo: '${collection}'`,
+    files: 'src/**/*.ts'
+  },
+  {
+    name: 'relationTo ohne Quotes',
+    pattern: /relationTo:\s*([a-z]+)\s*,/g,
+    fix: (match, collection) => `relationTo: '${collection}',`,
+    files: 'src/**/*.ts'
+  },
+  {
+    name: 'Fehlende use client',
+    pattern: /^import React/m,
+    fix: (match) => "'use client'\n\nimport React",
+    files: 'src/blocks/**/Component.tsx,src/heroes/**/index.tsx'
+  },
+];
+
+// Für jedes Pattern:
+for (const bug of bugPatterns) {
+  console.log(`Fixe: ${bug.name}...`);
+  // Suche und ersetze in allen betroffenen Files
+}
+```
+
+### 2. Vollständigkeits-Check
 
 ```bash
 echo "🔍 Vollständigkeits-Check..."
@@ -53,7 +190,97 @@ echo "✅ Alle ${BLOCK_COUNT} Blocks vorhanden"
 echo "✅ Vollständigkeits-Check erfolgreich"
 ```
 
-### 2. TypeScript Build testen
+### 2. Vollständigkeits-Check
+
+```bash
+echo "🔍 Vollständigkeits-Check..."
+
+BUILD_CONFIG=$(cat .temp/build-config.json)
+
+# Check Navbar
+if [ ! -d "src/Header" ]; then
+  echo "❌ Header Ordner fehlt"
+  exit 1
+fi
+echo "✅ Header vorhanden"
+
+# Check Footer
+if [ ! -d "src/Footer" ]; then
+  echo "❌ Footer Ordner fehlt"
+  exit 1
+fi
+echo "✅ Footer vorhanden"
+
+# Check Heroes
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+for i in $(seq 0 $(($HERO_COUNT - 1))); do
+  HERO_NAME=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].name")
+  if [ ! -d "src/heroes/${HERO_NAME}" ]; then
+    echo "❌ Hero fehlt: ${HERO_NAME}"
+    exit 1
+  fi
+done
+echo "✅ Alle ${HERO_COUNT} Heroes vorhanden"
+
+# Check Blocks
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_CATEGORY=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].category")
+  if [ ! -d "src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}" ]; then
+    echo "❌ Block fehlt: ${BLOCK_NAME}"
+    exit 1
+  fi
+done
+echo "✅ Alle ${BLOCK_COUNT} Blocks vorhanden"
+
+echo "✅ Vollständigkeits-Check erfolgreich"
+```
+
+### 3. Code-Qualität Checks
+
+```bash
+echo "📝 Code-Qualität Checks..."
+
+# Check 1: Alle Component.tsx haben 'use client'
+echo "Prüfe 'use client' Direktiven..."
+MISSING_USE_CLIENT=$(find src/blocks src/heroes -name "Component.tsx" -o -name "index.tsx" | xargs grep -L "use client" || true)
+
+if [ ! -z "$MISSING_USE_CLIENT" ]; then
+  echo "⚠️  Folgende Files fehlen 'use client':"
+  echo "$MISSING_USE_CLIENT"
+  echo "Füge 'use client' hinzu..."
+  
+  # Auto-fix
+  for file in $MISSING_USE_CLIENT; do
+    if ! grep -q "use client" "$file"; then
+      sed -i "1i'use client'\n" "$file"
+      echo "✅ Fixed: $file"
+    fi
+  done
+fi
+
+# Check 2: relationTo Werte
+echo "Prüfe relationTo Werte..."
+BAD_RELATION=$(grep -r "relationTo.*\.slug\|relationTo:\s*[a-z]" src/ --include="*.ts" || true)
+
+if [ ! -z "$BAD_RELATION" ]; then
+  echo "⚠️  Falsche relationTo gefunden:"
+  echo "$BAD_RELATION"
+  echo ""
+  echo "CURSOR: Bitte korrigiere diese Files manuell:"
+  echo "- Entferne .slug von relationTo Werten"
+  echo "- Füge Quotes hinzu: relationTo: 'media' nicht relationTo: media"
+fi
+
+# Check 3: TypeScript Syntax
+echo "Prüfe TypeScript Syntax..."
+npx tsc --noEmit --skipLibCheck 2>&1 | head -20
+
+echo "✅ Code-Qualität Checks abgeschlossen"
+```
+
+### 4. TypeScript Build testen
 
 ```bash
 echo "🔨 Teste TypeScript Build..."
@@ -79,7 +306,7 @@ echo "🚀 Starte Dev Server für Tests..."
 npm run dev &
 DEV_PID=$!
 
-# Warte bis Server läuft
+# Warte bis Server läuft 
 sleep 15
 
 echo ""

@@ -25,7 +25,7 @@ import {
 } from 'payloadcms-lexical-ext'
 
 // Import CSS for color picker
-import 'payloadcms-lexical-ext/client/client.css'
+// import 'payloadcms-lexical-ext/client/client.css'
 
 export const defaultLexical: Config['editor'] = lexicalEditor({
   features: () => {
