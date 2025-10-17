@@ -15,8 +15,8 @@ Dieser Workflow orchestriert die automatische Generierung einer PayloadCMS Websi
 
 ```typescript
 const RELUME_CONFIG = {
-  owner: "your-username",        // Dein GitHub Username
-  repo: "your-relume-repo",      // Dein Relume Components Repo
+  owner: "fullstacksimonio",        // Dein GitHub Username
+  repo: "relume-components",      // Dein Relume Components Repo
   branch: "main",
   basePath: "relume"
 }
