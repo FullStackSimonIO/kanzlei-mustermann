@@ -3,91 +3,117 @@ description: Haupt-Workflow für PayloadCMS Website Generierung
 globs:
   - "src/**/*.{ts,tsx}"
   - ".cursor/commands/**/*.mdc"
+  - ".cursor/relume-mapping.json"
   - "components/ui/**/*.tsx"
 alwaysIncludeContext: true
 ---
 
 # PayloadCMS Website Generator - Haupt-Workflow
 
-Dieser Workflow orchestriert die automatische Generierung einer PayloadCMS Website basierend auf Relume Komponenten aus privatem GitHub Repository.
+Dieser Workflow orchestriert die automatische Generierung einer PayloadCMS Website basierend auf Relume Komponenten aus einem geklonten Git Repository.
 
-## Relume Repository Konfiguration
+## Relume Repository Setup
 
-```typescript
-const RELUME_CONFIG = {
-  owner: "fullstacksimonio",        // Dein GitHub Username
-  repo: "relume-components",      // Dein Relume Components Repo
-  branch: "main",
-  basePath: "relume"
+**WICHTIG:** Stelle sicher, dass das Relume Repository korrekt konfiguriert ist:
+
+```json
+// filepath: .cursor/relume-mapping.json
+{
+  "repository": {
+    "url": "https://github.com/your-username/your-relume-repo.git",
+    "branch": "main",
+    "localPath": ".temp/relume-repo"
+  }
 }
+```
+
+### Authentifizierung
+
+**Für Public Repos:** Keine Auth nötig  
+**Für Private Repos:** 
+```bash
+# SSH Key Setup (einmalig)
+git config --global credential.helper store
+# oder
+ssh-keygen -t ed25519 -C "your_email@example.com"
+# SSH Key zu GitHub hinzufügen
 ```
 
 ## Workflow-Schritte
 
-### 1. Initialisierung
-**Führe aus:** `.cursor/commands/00-initialize.mdc`
-- Projekt-Setup validieren
-- GitHub MCP Connection testen
-- Dependencies prüfen
-- Git Branch erstellen
-- Props validieren
+### 0. Initialisierung
+**Führe aus:** `.cursor/commands/00-initialize-project.mdc`
+- Relume Repository klonen nach `.temp/relume-repo/`
+- Repository Struktur validieren
+- Projekt-Setup prüfen
+- Git Feature Branch erstellen
+- Props validieren und normalisieren
+- Build Config erstellen (`.temp/build-config.json`)
+- Alle Komponenten-Existenz prüfen
 
-### 2. Navbar erstellen
+### 1. Navbar erstellen
 **Führe aus:** `.cursor/commands/01-create-navbar.mdc`
-- Relume Navbar von GitHub laden (`relume/Header/{navbar}.tsx`)
-- Analysieren & in MobileNav & DesktopNav aufteilen
-- PayloadCMS config mit deutschen Labels erstellen
+- Navbar Code aus `.temp/relume-repo/relume/Header/` laden
+- Code analysieren (Buttons, Mobile Menu, etc.)
+- In MobileNav.tsx & DesktopNav.tsx aufteilen
+- PayloadCMS config mit deutschen Labels
 - ShadCN Buttons verwenden (keine Custom-Styles!)
 - Migration durchführen
-- Git Commit erstellen
+- Git Commit
 
-### 3. Footer erstellen
+### 2. Footer erstellen
 **Führe aus:** `.cursor/commands/02-create-footer.mdc`
-- Relume Footer von GitHub laden (`relume/Footer/{footer}.tsx`)
-- In MobileFooter & DesktopFooter aufteilen
-- PayloadCMS config erstellen
-- ShadCN Buttons verwenden
+- Footer Code aus `.temp/relume-repo/relume/Footer/` laden
+- Code analysieren
+- In MobileFooter.tsx & DesktopFooter.tsx aufteilen
+- PayloadCMS config mit Social Media
+- ShadCN Buttons & Lucide Icons
 - Migration durchführen
-- Git Commit erstellen
+- Git Commit
 
-### 4. Heroes erstellen
+### 3. Heroes erstellen
 **Führe aus:** `.cursor/commands/03-create-heroes.mdc`
-- Alle Hero Komponenten von GitHub laden
-- **WICHTIG:** Namen normalisieren (Header1 → HeroHeader1)
-- Pfad: `relume/Header/HeroHeader{N}.tsx`
-- Jede Hero in eigenen Ordner konvertieren
-- Shared config.ts mit conditionals erstellen
-- ShadCN Button variants nutzen
-- Migrationen durchführen
-- Git Commit erstellen
+- Alle Heroes aus `.temp/relume-repo/relume/Header/HeroHeader*.tsx` laden
+- **Namen normalisieren:** `Header1` → `HeroHeader1`
+- Jeden Hero analysieren
+- Shared config.ts mit heroType selector
+- Einzelne Hero-Komponenten erstellen
+- HeroRenderer mit dynamischem Loading
+- ShadCN Button variants
+- Migration durchführen
+- Git Commit
 
-### 5. Blocks erstellen
+### 4. Blocks erstellen
 **Führe aus:** `.cursor/commands/04-create-blocks.mdc`
-- Alle Block Komponenten von GitHub laden
-- Auto-detect Category aus Namen
-- Pfad: `relume/{Category}/{BlockName}.tsx`
-- In Kategorien organisieren (Layout, CTA, FAQ, etc.)
-- Jeder Block: Component.tsx, config.ts, index.ts
+- Alle Blocks aus `.temp/relume-repo/relume/{Category}/` laden
+- Category auto-detection aus Block-Namen
+- Code-Analyse pro Block
+- Strukturen erstellen:
+  - `src/blocks/{Category}/{BlockName}/Component.tsx`
+  - `src/blocks/{Category}/{BlockName}/config.ts`
+  - `src/blocks/{Category}/{BlockName}/index.ts`
+- BlockRenderer mit dynamischem Loading
 - ShadCN Buttons in allen Blocks
-- Migrationen durchführen
-- Git Commit erstellen
+- Migration durchführen
+- Git Commit
 
-### 6. Finalisierung
+### 5. Finalisierung
 **Führe aus:** `.cursor/commands/05-finalize.mdc`
-- Alle Komponenten in payload.config.ts registrieren
+- Vollständigkeits-Check aller Komponenten
 - TypeScript Build testen
-- Payload Admin testen
-- Finale Migration erstellen
-- Dokumentation generieren
-- Tests ausführen
-- Feature Branch in main mergen
+- Payload Admin manuell testen
+- `WEBSITE_GENERATION.md` generieren
+- `README.md` aktualisieren
+- Finaler Git Commit
+- Branch pushen
+- Merge-Anleitung ausgeben
 
 ## Verwendung
 
 ### Basis-Kommando
 
 ```bash
-cursor run .cursor/tasks.mdc
+cursor run .cursor/tasks/build-website.mdc
 ```
 
 ### Mit Props (Beispiel)
@@ -97,7 +123,7 @@ cursor run .cursor/tasks.mdc
   "navbar": "Navbar1",
   "footer": "Footer1", 
   "heroes": ["Header1", "Header2", "HeroHeader5"],
-  "blocks": ["Layout1", "CTA2", "FAQ5", "Contact1", "Testimonial3"]
+  "blocks": ["Layout1", "CTA2", "FAQ5", "Contact1"]
 }
 ```
 
@@ -105,33 +131,32 @@ cursor run .cursor/tasks.mdc
 
 ```typescript
 interface BuildWebsiteProps {
-  navbar: string;      // z.B. "Navbar1" → lädt relume/Header/Navbar1.tsx
-  footer: string;      // z.B. "Footer1" → lädt relume/Footer/Footer1.tsx
-  heroes: string[];    // z.B. ["Header1", "HeroHeader5"] → lädt relume/Header/HeroHeader*.tsx
-  blocks: string[];    // z.B. ["CTA2", "FAQ5"] → lädt relume/{Category}/{Block}.tsx
+  navbar: string;      // z.B. "Navbar1"
+  footer: string;      // z.B. "Footer1"
+  heroes: string[];    // z.B. ["Header1", "HeroHeader5"]
+  blocks: string[];    // z.B. ["CTA2", "FAQ5", "Contact1"]
 }
 ```
 
-## Relume Path Resolution
+## Path Resolution
+
+Alle Pfade beziehen sich auf das **geklonte Repository** in `.temp/relume-repo/`:
 
 ### Navbar
 - Input: `"Navbar1"`
-- Path: `relume/Header/Navbar1.tsx`
+- File: `.temp/relume-repo/relume/Header/Navbar1.tsx`
 
 ### Footer
 - Input: `"Footer1"`
-- Path: `relume/Footer/Footer1.tsx`
+- File: `.temp/relume-repo/relume/Footer/Footer1.tsx`
 
-### Heroes (SPECIAL CASE!)
+### Heroes
 - Input: `"Header1"` → Normalisiert zu: `"HeroHeader1"`
-- Input: `"HeroHeader5"` → Bleibt: `"HeroHeader5"`
-- Path: `relume/Header/HeroHeader{N}.tsx`
+- File: `.temp/relume-repo/relume/Header/HeroHeader1.tsx`
 
 ### Blocks
 - Input: `"CTA2"` → Category: "CTA"
-- Path: `relume/CTA/CTA2.tsx`
-- Input: `"FAQ5"` → Category: "FAQ"
-- Path: `relume/FAQ/FAQ5.tsx`
+- File: `.temp/relume-repo/relume/CTA/CTA2.tsx`
 
 ## ShadCN Button Integration
 
@@ -156,35 +181,34 @@ import { Button } from '@/components/ui/button'
     { label: 'Ghost', value: 'ghost' },
     { label: 'Link', value: 'link' },
   ],
-  defaultValue: 'default',
 }
 ```
 
-## Erweiterbarkeit
+## Arbeitsverzeichnisse
 
-Neue Schritte hinzufügen:
-1. Neue Command-Datei in `.cursor/commands/` erstellen (z.B. `06-add-seo.mdc`)
-2. Hier im Workflow-Ablauf referenzieren
-3. Nummerierung beibehalten (06-, 07-, etc.)
-4. Im Schema dokumentieren
+Während des Workflows werden folgende Temp-Ordner erstellt:
 
-Beispiele für zukünftige Erweiterungen:
-- `06-add-seo.mdc` - SEO Felder & Metadata
-- `07-add-analytics.mdc` - Analytics Integration
-- `08-add-forms.mdc` - Form Blocks
-- `09-add-ecommerce.mdc` - E-Commerce Blöcke
-
-## GitHub MCP Requirements
-
-Stelle sicher:
-- [ ] GitHub Personal Access Token gesetzt (`GITHUB_TOKEN`)
-- [ ] Token hat `repo` read access
-- [ ] MCP Config in `.cursor/mcp-config.json`
-- [ ] Relume Repo ist zugänglich
+```
+.temp/
+├── relume-repo/              # Geklontes Relume Repository
+├── build-config.json         # Zentrale Build Configuration
+├── current-branch.txt        # Feature Branch Name
+├── relume-components/        # Kopierte Komponenten für Analyse
+│   ├── navbar/
+│   ├── footer/
+│   ├── heroes/
+│   └── blocks/
+└── analysis/                 # Code-Analyse JSON Files
+    ├── navbar-analysis.json
+    ├── footer-analysis.json
+    ├── heroes-analysis.json
+    └── blocks-analysis.json
+```
 
 ## Erfolgskriterien
 
-- [ ] Alle Komponenten erfolgreich von GitHub geladen
+- [ ] Relume Repository erfolgreich geklont
+- [ ] Alle Komponenten aus lokalem Repo geladen
 - [ ] Relume Designs exakt beibehalten
 - [ ] Nur ShadCN Button Variants verwendet
 - [ ] Deutsche UX Labels überall
@@ -192,3 +216,47 @@ Stelle sicher:
 - [ ] TypeScript Build ohne Fehler
 - [ ] Payload Admin funktioniert
 - [ ] Git History sauber
+
+## Troubleshooting
+
+### Repository Clone fehlschlägt
+```bash
+# Check ob Repo URL korrekt ist
+cat .cursor/relume-mapping.json | jq '.repository.url'
+
+# Für private Repos: SSH Key prüfen
+ssh -T git@github.com
+
+# Manuell klonen zum Testen
+git clone https://github.com/your-username/your-relume-repo.git .temp/test
+```
+
+### Komponente nicht gefunden
+```bash
+# Prüfe ob Datei im geklonten Repo existiert
+ls -la .temp/relume-repo/relume/Header/
+
+# Prüfe Build Config
+cat .temp/build-config.json | jq '.components.navbar'
+```
+
+### Migration fehlgeschlagen
+```bash
+# Check Migration Logs
+npm run payload migrate -- --status
+
+# Re-run Migration
+npm run payload migrate
+```
+
+## Erweiterbarkeit
+
+Neue Schritte hinzufügen:
+1. Command-Datei in `.cursor/commands/` erstellen
+2. Hier im Workflow referenzieren
+3. Nummerierung beibehalten
+
+Beispiele:
+- `06-add-seo.mdc` - SEO Felder
+- `07-add-analytics.mdc` - Analytics
+- `08-add-forms.mdc` - Formulare
