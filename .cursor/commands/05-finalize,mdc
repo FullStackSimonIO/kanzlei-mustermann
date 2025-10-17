@@ -8,86 +8,106 @@ description: Projekt finalisieren, testen und mergen
 
 ### 1. Vollständigkeits-Check
 
-```typescript
-// Lade Build Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
-
-console.log('🔍 Vollständigkeits-Check...\n');
-
-// Check Navbar
-const navbarExists = fs.existsSync('src/Header/MobileNav.tsx') &&
-                     fs.existsSync('src/Header/DesktopNav.tsx') &&
-                     fs.existsSync('src/Header/config.ts');
-console.log(`${navbarExists ? '✅' : '❌'} Navbar (MobileNav, DesktopNav, config)`);
-
-// Check Footer
-const footerExists = fs.existsSync('src/Footer/MobileFooter.tsx') &&
-                     fs.existsSync('src/Footer/DesktopFooter.tsx') &&
-                     fs.existsSync('src/Footer/config.ts');
-console.log(`${footerExists ? '✅' : '❌'} Footer (MobileFooter, DesktopFooter, config)`);
-
-// Check Heroes
-let allHeroesExist = true;
-for (const hero of config.components.heroes) {
-  const heroExists = fs.existsSync(`src/heroes/${hero.name}/index.tsx`);
-  console.log(`${heroExists ? '✅' : '❌'} Hero: ${hero.name}`);
-  if (!heroExists) allHeroesExist = false;
-}
-
-// Check Blocks
-let allBlocksExist = true;
-for (const block of config.components.blocks) {
-  const blockExists = fs.existsSync(`src/blocks/${block.category}/${block.name}/Component.tsx`) &&
-                      fs.existsSync(`src/blocks/${block.category}/${block.name}/config.ts`) &&
-                      fs.existsSync(`src/blocks/${block.category}/${block.name}/index.ts`);
-  console.log(`${blockExists ? '✅' : '❌'} Block: ${block.name} (${block.category})`);
-  if (!blockExists) allBlocksExist = false;
-}
-
-// Check payload.config.ts
-const payloadConfig = fs.readFileSync('src/payload.config.ts', 'utf-8');
-const hasHeader = payloadConfig.includes('Header');
-const hasFooter = payloadConfig.includes('Footer');
-const hasHeroBlock = payloadConfig.includes('HeroBlock');
-console.log(`\n${hasHeader ? '✅' : '❌'} Header in payload.config.ts registriert`);
-console.log(`${hasFooter ? '✅' : '❌'} Footer in payload.config.ts registriert`);
-console.log(`${hasHeroBlock ? '✅' : '❌'} HeroBlock in payload.config.ts registriert`);
-
-// Check Migrations
-const migrationsDir = 'src/migrations';
-const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.ts'));
-console.log(`\n✅ ${migrations.length} Migrationen gefunden`);
-
-const allChecksPass = navbarExists && footerExists && allHeroesExist && 
-                      allBlocksExist && hasHeader && hasFooter && hasHeroBlock;
-
-if (!allChecksPass) {
-  throw new Error('❌ Vollständigkeits-Check fehlgeschlagen. Bitte fehlende Komponenten ergänzen.');
-}
-
-console.log('\n✅ Alle Komponenten vorhanden!\n');
-```
-
-### 2. Finale Migration erstellen
-
 ```bash
-npm run payload migrate:create -- --name finalize-website-generation
+echo "🔍 Vollständigkeits-Check..."
 
-echo "Migration erstellt, führe aus..."
-npm run payload migrate
+BUILD_CONFIG=$(cat .temp/build-config.json)
 
-echo "✅ Finale Migration erfolgreich ausgeführt"
+# Check Navbar
+if [ -f "src/Header/MobileNav.tsx" ] && \
+   [ -f "src/Header/DesktopNav.tsx" ] && \
+   [ -f "src/Header/config.ts" ]; then
+  echo "✅ Navbar vollständig"
+else
+  echo "❌ Navbar Dateien fehlen"
+  exit 1
+fi
+
+# Check Footer
+if [ -f "src/Footer/MobileFooter.tsx" ] && \
+   [ -f "src/Footer/DesktopFooter.tsx" ] && \
+   [ -f "src/Footer/config.ts" ]; then
+  echo "✅ Footer vollständig"
+else
+  echo "❌ Footer Dateien fehlen"
+  exit 1
+fi
+
+# Check Heroes
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+HEROES_MISSING=0
+
+for i in $(seq 0 $(($HERO_COUNT - 1))); do
+  HERO_NAME=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].name")
+  if [ ! -f "src/heroes/${HERO_NAME}/index.tsx" ]; then
+    echo "❌ Hero fehlt: $HERO_NAME"
+    HEROES_MISSING=$((HEROES_MISSING + 1))
+  fi
+done
+
+if [ $HEROES_MISSING -eq 0 ]; then
+  echo "✅ Alle $HERO_COUNT Heroes vorhanden"
+else
+  echo "❌ $HEROES_MISSING Heroes fehlen"
+  exit 1
+fi
+
+# Check Blocks
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+BLOCKS_MISSING=0
+
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_CATEGORY=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].category")
+  
+  if [ ! -f "src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}/Component.tsx" ] || \
+     [ ! -f "src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}/config.ts" ]; then
+    echo "❌ Block fehlt: $BLOCK_NAME ($BLOCK_CATEGORY)"
+    BLOCKS_MISSING=$((BLOCKS_MISSING + 1))
+  fi
+done
+
+if [ $BLOCKS_MISSING -eq 0 ]; then
+  echo "✅ Alle $BLOCK_COUNT Blocks vorhanden"
+else
+  echo "❌ $BLOCKS_MISSING Blocks fehlen"
+  exit 1
+fi
+
+# Check payload.config.ts
+if grep -q "Header" src/payload.config.ts && \
+   grep -q "Footer" src/payload.config.ts && \
+   grep -q "HeroBlock" src/payload.config.ts; then
+  echo "✅ Alle Komponenten in payload.config.ts registriert"
+else
+  echo "❌ Nicht alle Komponenten registriert"
+  exit 1
+fi
+
+# Check Migrations
+MIGRATION_COUNT=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
+echo "✅ $MIGRATION_COUNT Migrationen gefunden"
+
+echo ""
+echo "✅ Vollständigkeits-Check erfolgreich!"
 ```
 
-### 3. TypeScript Build testen
+### 2. TypeScript Build testen
 
 ```bash
 echo "🔨 Teste TypeScript Build..."
 
 # Types generieren
+echo "Generiere PayloadCMS Types..."
 npm run payload generate:types
 
+if [ $? -ne 0 ]; then
+  echo "❌ Type Generation fehlgeschlagen"
+  exit 1
+fi
+
 # Build ausführen
+echo "Führe Build aus..."
 npm run build
 
 if [ $? -eq 0 ]; then
@@ -99,7 +119,7 @@ else
 fi
 ```
 
-### 4. Payload Admin testen
+### 3. Payload Admin testen
 
 ```bash
 echo "🚀 Starte Dev Server für Tests..."
@@ -107,426 +127,751 @@ npm run dev &
 DEV_PID=$!
 
 # Warte bis Server läuft
-sleep 10
+echo "Warte auf Server Start..."
+sleep 15
 
 echo ""
-echo "📋 Manuelle Test-Checkliste:"
+echo "═══════════════════════════════════════════════════════════"
+echo "  📋 MANUELLE TEST-CHECKLISTE"
+echo "═══════════════════════════════════════════════════════════"
 echo ""
 echo "Öffne: http://localhost:3000/admin"
 echo ""
 echo "Teste folgendes:"
 echo "- [ ] Header Global ist editierbar"
 echo "- [ ] Footer Global ist editierbar"
+echo "- [ ] Logo Upload funktioniert"
+echo "- [ ] Navigation Links können hinzugefügt werden"
+echo "- [ ] CTA Button hat ShadCN Variants (default, outline, ghost, link)"
 echo "- [ ] Neue Seite kann erstellt werden"
 echo "- [ ] Hero Block kann zu Seite hinzugefügt werden"
+echo "- [ ] Alle Hero-Typen sind auswählbar"
 echo "- [ ] Alle anderen Blocks sind verfügbar"
+echo "- [ ] Conditional Fields funktionieren (z.B. Image nur bei Heroes mit Bild)"
+echo "- [ ] RichText Editor funktioniert"
+echo "- [ ] Media Upload funktioniert"
 echo "- [ ] Alle Blocks sind editierbar"
-echo "- [ ] ShadCN Button Variants funktionieren"
-echo "- [ ] Keine Fehlermeldungen in Console"
 echo "- [ ] Deutsche Labels überall vorhanden"
+echo "- [ ] Keine Fehlermeldungen in Browser Console"
+echo "- [ ] Keine Fehlermeldungen in Server Console"
+echo ""
+echo "═══════════════════════════════════════════════════════════"
 echo ""
 echo "Drücke Enter wenn Tests abgeschlossen..."
 read
 
 # Dev Server beenden
 kill $DEV_PID
+echo "✅ Dev Server gestoppt"
 ```
 
-### 5. Dokumentation generieren
+### 4. Dokumentation generieren
 
 ```typescript
-// Lade Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+);
+
+const heroAnalysis = JSON.parse(
+  fs.readFileSync('.temp/analysis/heroes-analysis.json', 'utf-8')
+);
+
+const blockAnalysis = JSON.parse(
+  fs.readFileSync('.temp/analysis/blocks-analysis.json', 'utf-8')
+);
 
 const documentation = `# Website Generierung - Dokumentation
 
 Generiert am: ${new Date().toLocaleString('de-DE')}
-Branch: ${config.branch}
+Branch: ${buildConfig.branch}
+
+## Übersicht
+
+Diese Website wurde vollautomatisch aus Relume Komponenten generiert.
+Alle Designs wurden exakt übernommen - keine Custom-Styles!
 
 ## Konfiguration
 
-### Props
+### Input Props
 \`\`\`json
-${JSON.stringify({
-  navbar: config.components.navbar.name,
-  footer: config.components.footer.name,
-  heroes: config.components.heroes.map(h => h.originalName),
-  blocks: config.components.blocks.map(b => b.name)
-}, null, 2)}
+{
+  "navbar": "${buildConfig.components.navbar.name}",
+  "footer": "${buildConfig.components.footer.name}",
+  "heroes": [${buildConfig.components.heroes.map(h => `"${h.originalName}"`).join(', ')}],
+  "blocks": [${buildConfig.components.blocks.map(b => `"${b.name}"`).join(', ')}]
+}
 \`\`\`
+
+### Relume Repository
+- **Lokaler Pfad**: \`${buildConfig.relume.localPath}\`
+- **Base Path**: \`${buildConfig.relume.basePath}\`
 
 ## Komponenten
 
-### Header
-- **Komponente**: ${config.components.navbar.name}
-- **Quelle**: ${config.components.navbar.path}
-- **Pfad**: \`src/Header/\`
+### Header (Global)
+- **Komponente**: ${buildConfig.components.navbar.name}
+- **Quelle**: \`${buildConfig.components.navbar.localPath}\`
+- **Ziel**: \`src/Header/\`
 - **Dateien**: 
-  - MobileNav.tsx
-  - DesktopNav.tsx
-  - config.ts
-  - hooks/revalidateHeader.ts
-- **Global**: \`header\`
+  - \`MobileNav.tsx\` - Mobile Navigation mit Burger Menu
+  - \`DesktopNav.tsx\` - Desktop Navigation
+  - \`config.ts\` - PayloadCMS Global Config
+  - \`hooks/revalidateHeader.ts\` - Cache Revalidation
+  - \`index.tsx\` - Combined Export
+- **Global Slug**: \`header\`
+- **Features**:
+  - Logo Upload
+  - Navigation Array (max 8 Items)
+  - Submenu Support (Dropdown)
+  - CTA Button mit ShadCN Variants
+  - Responsive (lg:hidden / hidden lg:)
 
-### Footer
-- **Komponente**: ${config.components.footer.name}
-- **Quelle**: ${config.components.footer.path}
-- **Pfad**: \`src/Footer/\`
+### Footer (Global)
+- **Komponente**: ${buildConfig.components.footer.name}
+- **Quelle**: \`${buildConfig.components.footer.localPath}\`
+- **Ziel**: \`src/Footer/\`
 - **Dateien**:
-  - MobileFooter.tsx
-  - DesktopFooter.tsx
-  - config.ts
-  - hooks/revalidateFooter.ts
-- **Global**: \`footer\`
+  - \`MobileFooter.tsx\` - Mobile Layout (stacked)
+  - \`DesktopFooter.tsx\` - Desktop Grid Layout
+  - \`config.ts\` - PayloadCMS Global Config
+  - \`hooks/revalidateFooter.ts\` - Cache Revalidation
+  - \`index.tsx\` - Combined Export
+- **Global Slug**: \`footer\`
+- **Features**:
+  - Logo Upload
+  - Beschreibung (Textarea)
+  - Link Columns (2-4 Spalten)
+  - Social Media Icons (Lucide)
+  - Copyright Text
+  - Responsive Grid/Stack
 
-### Heroes
-
-${config.components.heroes.map(hero => `#### ${hero.originalName}
-- **Komponente**: ${hero.name}
-- **Quelle**: ${hero.path}
-- **Pfad**: \`src/heroes/${hero.name}/\`
-- **Block Slug**: \`hero\``).join('\n\n')}
+### Heroes (${buildConfig.components.heroes.length} Typen)
 
 **Shared Config**: \`src/heroes/config.ts\`
-- Conditionals für verschiedene Hero-Typen
-- ShadCN Button Variants
+- **Block Slug**: \`hero\`
+- **Smart Conditionals**: Felder erscheinen nur für relevante Hero-Typen
+- **ShadCN Button Variants**: default, outline, ghost, link
 
-### Blocks
+${buildConfig.components.heroes.map((hero, idx) => {
+  const analysis = heroAnalysis[idx];
+  return `#### ${hero.originalName} → ${hero.name}
+- **Quelle**: \`${hero.localPath}\`
+- **Ziel**: \`src/heroes/${hero.name}/index.tsx\`
+- **Features**:
+  - Heading & Subheading (RichText)
+  ${analysis.hasImage ? '- Image Upload' : ''}
+  ${analysis.hasVideo ? '- Background Video' : ''}
+  ${analysis.hasFeatures ? '- Feature List mit Icons' : ''}
+  ${analysis.hasStats ? '- Statistics Grid' : ''}
+  ${analysis.hasTestimonial ? '- Testimonial mit Avatar' : ''}
+  - Buttons (max 3) mit ShadCN Variants`;
+}).join('\n\n')}
+
+### Content Blocks (${buildConfig.components.blocks.length} Typen)
 
 ${Object.entries(
-  config.components.blocks.reduce((acc, block) => {
+  buildConfig.components.blocks.reduce((acc, block, idx) => {
     if (!acc[block.category]) acc[block.category] = [];
-    acc[block.category].push(block);
+    acc[block.category].push({ ...block, analysis: blockAnalysis[idx] });
     return acc;
   }, {})
-).map(([category, blocks]) => `#### ${category}
-${blocks.map(b => `- **${b.name}**
-  - Quelle: ${b.path}
-  - Pfad: \`src/blocks/${b.category}/${b.name}/\`
-  - Block Slug: \`${b.name.toLowerCase()}\``).join('\n')}`).join('\n\n')}
+).map(([category, blocks]) => `#### ${category} (${blocks.length} Blocks)
 
-## Migrationen
-
-${fs.readdirSync('src/migrations')
-  .filter(f => f.endsWith('.ts'))
-  .map(m => `- ${m}`)
-  .join('\n')}
+${blocks.map(b => `##### ${b.name}
+- **Quelle**: \`${b.localPath}\`
+- **Ziel**: \`src/blocks/${b.category}/${b.name}/\`
+- **Block Slug**: \`${b.name.toLowerCase()}\`
+- **Dateien**: Component.tsx, config.ts, index.ts
+- **Features**:
+  ${b.analysis.hasHeading ? '- Heading & Description (RichText)' : ''}
+  ${b.analysis.hasImage ? '- Image Upload' : ''}
+  ${b.analysis.hasButtons ? \`- Buttons (\${b.analysis.buttonCount}) mit ShadCN Variants\` : ''}
+  ${b.analysis.hasForm ? '- Form Integration' : ''}
+  ${b.analysis.hasGrid ? '- Grid Layout' : ''}
+  ${b.analysis.hasCards ? '- Card Components' : ''}
+  ${b.analysis.hasTestimonials ? '- Testimonials' : ''}
+  ${b.analysis.hasFAQ ? '- FAQ Accordion' : ''}`).join('\n\n')}
+`).join('\n\n')}
 
 ## Verwendung
 
-### Neue Seite erstellen
+### 1. Header/Footer bearbeiten
 
-1. Gehe zu Admin Panel: \`http://localhost:3000/admin\`
-2. Navigiere zu "Seiten"
-3. Klicke "Neue Seite erstellen"
-4. Füge Blocks hinzu:
-   - Hero (wähle Typ aus ${config.components.heroes.length} verfügbaren)
-   - Content Blocks (${config.components.blocks.length} verfügbar)
-5. Speichern und veröffentlichen
+\`\`\`bash
+# Öffne Admin Panel
+npm run dev
+# Gehe zu http://localhost:3000/admin
+# Navigiere zu "Globale Einstellungen" > "Kopfzeile" oder "Fußzeile"
+\`\`\`
 
-### Header/Footer bearbeiten
+**Header Felder:**
+- Logo (Upload)
+- Navigation Links (Array, max 8)
+  - Label
+  - Link (Page oder URL)
+  - Submenu (Optional)
+- CTA Button
+  - Text
+  - Link (Page oder URL)
+  - Variant (default, outline, ghost, link)
 
-1. Gehe zu "Globale Einstellungen"
-2. Wähle "Kopfzeile" oder "Fußzeile"
-3. Bearbeite Felder
-4. Buttons nutzen ShadCN Variants (default, outline, ghost, link)
-5. Speichern
+**Footer Felder:**
+- Logo (Upload, optional)
+- Beschreibung (Textarea)
+- Spalten (Array, 2-4)
+  - Heading
+  - Links Array (Label + Link)
+- Social Media (Array)
+  - Platform (Select: Facebook, Twitter, Instagram, LinkedIn, YouTube, GitHub)
+  - URL
+- Copyright Text
 
-## Button Styling
+### 2. Neue Seite erstellen
+
+\`\`\`bash
+# Admin Panel > Seiten > Neue Seite erstellen
+\`\`\`
+
+**Layout Blocks verfügbar:**
+1. **Hero Block** (${buildConfig.components.heroes.length} Typen)
+   - Wähle Hero Typ aus Dropdown
+   - Felder erscheinen dynamisch basierend auf Typ
+   - Buttons mit ShadCN Variants
+
+2. **Content Blocks** (${buildConfig.components.blocks.length} verfügbar)
+   - Kategorien: ${Object.keys(
+     buildConfig.components.blocks.reduce((acc, b) => {
+       acc[b.category] = true;
+       return acc;
+     }, {})
+   ).join(', ')}
+   - Jeder Block mit deutschen Labels
+   - RichText für Beschreibungen
+   - Media Upload für Bilder
+   - Buttons mit ShadCN Variants
+
+### 3. Button Styling
 
 **WICHTIG**: Alle Buttons verwenden ausschließlich ShadCN UI Variants:
-- \`default\` - Standard Button (gefüllt)
-- \`outline\` - Button mit Rahmen
-- \`ghost\` - Transparenter Button
-- \`link\` - Link-Style Button
 
-**KEINE** Custom-Styles! Nur die Variants aus \`components/ui/button.tsx\`.
+\`\`\`typescript
+import { Button } from '@/components/ui/button'
+
+// Verfügbare Variants:
+<Button variant="default">  {/* Gefüllt, Primary Color */}
+<Button variant="outline">  {/* Rahmen, transparent */}
+<Button variant="ghost">    {/* Vollständig transparent */}
+<Button variant="link">     {/* Als Link gestylt */}
+\`\`\`
+
+**KEINE Custom-Styles!** Nur die Variants aus \`components/ui/button.tsx\`.
+
+### 4. Responsive Design
+
+Alle Komponenten verwenden Tailwind Breakpoints:
+- Mobile: Default (keine Prefix)
+- Tablet: \`md:\` (768px+)
+- Desktop: \`lg:\` (1024px+)
+
+Navigation:
+- Mobile: \`lg:hidden\` - Burger Menu
+- Desktop: \`hidden lg:block\` - Horizontal Nav
 
 ## Design Preservation
 
-✅ **Alle Original Relume Designs beibehalten**
-- Tailwind Classes exakt übernommen
-- Layouts nicht verändert
-- Spacing beibehalten
-- Responsive Breakpoints unverändert
+✅ **Alle Original Relume Designs wurden exakt übernommen**
 
-## Nächste Schritte
+### Was beibehalten wurde:
+- Alle Tailwind Classes (z.B. \`px-[5%]\`, \`py-16 md:py-24 lg:py-28\`)
+- Grid Layouts (z.B. \`grid-cols-1 lg:grid-cols-2\`)
+- Spacing (z.B. \`gap-x-20 gap-y-12\`)
+- Typography (z.B. \`text-6xl font-bold md:text-9xl\`)
+- Responsive Breakpoints (md:, lg:)
+- Container Struktur
 
-- [ ] Inhalte in Admin Panel eingeben
-- [ ] Header Logo hochladen
-- [ ] Navigation Links konfigurieren
-- [ ] Footer Spalten füllen
-- [ ] Erste Seiten mit Heroes und Blocks erstellen
-- [ ] SEO Felder konfigurieren (falls vorhanden)
-- [ ] Media Library mit Bildern füllen
-- [ ] Test-Content erstellen
-- [ ] Production Deployment vorbereiten
+### Was geändert wurde:
+- ❌ Hardcoded Daten → ✅ PayloadCMS Props
+- ❌ Custom Button Styles → ✅ ShadCN Variants
+- ❌ Static Content → ✅ Dynamic CMS Content
 
-## Relume Repository
-
-- Owner: ${config.relume.owner}
-- Repo: ${config.relume.repo}
-- Branch: ${config.relume.branch}
+### Was NICHT geändert wurde:
+- Layout & Struktur
+- Tailwind Classes
+- Spacing & Sizing
+- Responsive Behavior
+- Visual Design
 
 ## Technologie Stack
 
-- PayloadCMS 3.0
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- ShadCN UI Components
-- Relume Component Library
-`;
+- **PayloadCMS 3.0** - Headless CMS
+- **Next.js 14** - React Framework
+- **TypeScript** - Type Safety
+- **Tailwind CSS** - Utility-First CSS
+- **ShadCN UI** - Component Library
+- **Lucide React** - Icon Library
+- **Relume** - Component Source
 
-fs.writeFileSync('WEBSITE_GENERATION.md', documentation);
-console.log('✅ Dokumentation erstellt: WEBSITE_GENERATION.md');
-```
+## Migrations
 
-### 6. README.md aktualisieren
+Ausgeführte Migrationen:
+\`\`\`bash
+$(ls src/migrations/*.ts | sed 's/src\/migrations\//- /')
+\`\`\`
 
-```typescript
-// filepath: README.md
-const existingReadme = fs.readFileSync('README.md', 'utf-8');
+## Nächste Schritte
 
-const componentSection = `
+### Sofort:
+1. ✅ Content im Admin Panel eingeben
+2. ✅ Logo hochladen (Header & Footer)
+3. ✅ Navigation Links konfigurieren
+4. ✅ Footer Spalten füllen
+5. ✅ Erste Test-Seiten erstellen
 
-## Automatisch generierte Komponenten
+### Später:
+6. ⏳ SEO Felder konfigurieren (falls vorhanden)
+7. ⏳ Media Library mit Bildern füllen
+8. ⏳ Alle Seiten mit Content füllen
+9. ⏳ Finale Tests (Desktop + Mobile)
+10. ⏳ Production Deployment
 
-Diese Website wurde automatisch generiert mit folgenden Relume Komponenten:
+## Git Repository
 
-### Navigation & Footer
-- **Header**: ${config.components.navbar.name} (Mobile + Desktop)
-- **Footer**: ${config.components.footer.name} (Mobile + Desktop)
+- **Branch**: ${buildConfig.branch}
+- **// filepath: .cursor/commands/05-finalize.mdc
 
-### Hero Sektionen (${config.components.heroes.length})
-${config.components.heroes.map(h => `- ${h.originalName}`).join('\n')}
+---
+description: Projekt finalisieren, testen und mergen
+---
 
-### Content Blocks (${config.components.blocks.length})
-${Object.entries(
-  config.components.blocks.reduce((acc, block) => {
-    if (!acc[block.category]) acc[block.category] = [];
-    acc[block.category].push(block.name);
-    return acc;
-  }, {})
-).map(([category, blocks]) => 
-  `- **${category}**: ${blocks.join(', ')}`
-).join('\n')}
+# Schritt 5: Finalisierung
 
-Siehe [WEBSITE_GENERATION.md](./WEBSITE_GENERATION.md) für vollständige Dokumentation.
+## Aufgaben
 
-## Button Styling
-
-Alle Buttons nutzen ShadCN UI Variants (\`default\`, \`outline\`, \`ghost\`, \`link\`).
-Keine Custom-Styles - nur \`components/ui/button.tsx\` Variants.
-`;
-
-const updatedReadme = existingReadme + componentSection;
-fs.writeFileSync('README.md', updatedReadme);
-console.log('✅ README.md aktualisiert');
-```
-
-### 7. Package.json Scripts hinzufügen
-
-```json
-// filepath: package.json
-{
-  "scripts": {
-    // ...existing code...
-    "generate:website": "cursor run .cursor/tasks.mdc",
-    "generate:navbar": "cursor run .cursor/commands/01-create-navbar.mdc",
-    "generate:footer": "cursor run .cursor/commands/02-create-footer.mdc",
-    "generate:heroes": "cursor run .cursor/commands/03-create-heroes.mdc",
-    "generate:blocks": "cursor run .cursor/commands/04-create-blocks.mdc",
-    "generate:finalize": "cursor run .cursor/commands/05-finalize.mdc"
-  }
-}
-```
-
-### 8. Git Finalisierung
+### 1. Vollständigkeits-Check
 
 ```bash
-# Finale Änderungen adden
-git add .
-git add WEBSITE_GENERATION.md
-git add README.md
-git add package.json
+echo "🔍 Vollständigkeits-Check..."
 
-# Finaler Commit
-git commit -m "docs: finalize website generation
+BUILD_CONFIG=$(cat .temp/build-config.json)
 
-Complete documentation added:
-- WEBSITE_GENERATION.md with full component list
-- README.md updated with component overview
-- package.json scripts for regeneration
+# Check Navbar
+if [ -f "src/Header/MobileNav.tsx" ] && \
+   [ -f "src/Header/DesktopNav.tsx" ] && \
+   [ -f "src/Header/config.ts" ]; then
+  echo "✅ Navbar vollständig"
+else
+  echo "❌ Navbar Dateien fehlen"
+  exit 1
+fi
 
-Build Status:
-✅ TypeScript build successful
-✅ All migrations executed
-✅ ${config.components.heroes.length} Heroes
-✅ ${config.components.blocks.length} Blocks
-✅ ShadCN Button variants used
-✅ Original Relume designs preserved
-✅ German UX labels throughout
+# Check Footer
+if [ -f "src/Footer/MobileFooter.tsx" ] && \
+   [ -f "src/Footer/DesktopFooter.tsx" ] && \
+   [ -f "src/Footer/config.ts" ]; then
+  echo "✅ Footer vollständig"
+else
+  echo "❌ Footer Dateien fehlen"
+  exit 1
+fi
 
-Ready for:
-- Content creation in Admin Panel
-- Production deployment"
+# Check Heroes
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+HEROES_MISSING=0
 
-echo "✅ Finaler Commit erstellt"
+for i in $(seq 0 $(($HERO_COUNT - 1))); do
+  HERO_NAME=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].name")
+  if [ ! -f "src/heroes/${HERO_NAME}/index.tsx" ]; then
+    echo "❌ Hero fehlt: $HERO_NAME"
+    HEROES_MISSING=$((HEROES_MISSING + 1))
+  fi
+done
 
-# Branch pushen
-git push origin HEAD
+if [ $HEROES_MISSING -eq 0 ]; then
+  echo "✅ Alle $HERO_COUNT Heroes vorhanden"
+else
+  echo "❌ $HEROES_MISSING Heroes fehlen"
+  exit 1
+fi
+
+# Check Blocks
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+BLOCKS_MISSING=0
+
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_CATEGORY=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].category")
+  
+  if [ ! -f "src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}/Component.tsx" ] || \
+     [ ! -f "src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}/config.ts" ]; then
+    echo "❌ Block fehlt: $BLOCK_NAME ($BLOCK_CATEGORY)"
+    BLOCKS_MISSING=$((BLOCKS_MISSING + 1))
+  fi
+done
+
+if [ $BLOCKS_MISSING -eq 0 ]; then
+  echo "✅ Alle $BLOCK_COUNT Blocks vorhanden"
+else
+  echo "❌ $BLOCKS_MISSING Blocks fehlen"
+  exit 1
+fi
+
+# Check payload.config.ts
+if grep -q "Header" src/payload.config.ts && \
+   grep -q "Footer" src/payload.config.ts && \
+   grep -q "HeroBlock" src/payload.config.ts; then
+  echo "✅ Alle Komponenten in payload.config.ts registriert"
+else
+  echo "❌ Nicht alle Komponenten registriert"
+  exit 1
+fi
+
+# Check Migrations
+MIGRATION_COUNT=$(ls src/migrations/*.ts 2>/dev/null | wc -l)
+echo "✅ $MIGRATION_COUNT Migrationen gefunden"
 
 echo ""
-echo "📊 Generation Summary:"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Branch: ${config.branch}"
-echo "Navbar: ${config.components.navbar.name}"
-echo "Footer: ${config.components.footer.name}"
-echo "Heroes: ${config.components.heroes.length}"
-echo "Blocks: ${config.components.blocks.length}"
-echo "Migrations: $(ls src/migrations/*.ts | wc -l)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "🎉 Website Generation abgeschlossen!"
-echo ""
-echo "Nächste Schritte:"
-echo "1. Feature Branch in main mergen"
-echo "2. Content im Admin Panel erstellen"
-echo "3. Production Deployment"
+echo "✅ Vollständigkeits-Check erfolgreich!"
 ```
 
-### 9. Success Report generieren
+### 2. TypeScript Build testen
+
+```bash
+echo "🔨 Teste TypeScript Build..."
+
+# Types generieren
+echo "Generiere PayloadCMS Types..."
+npm run payload generate:types
+
+if [ $? -ne 0 ]; then
+  echo "❌ Type Generation fehlgeschlagen"
+  exit 1
+fi
+
+# Build ausführen
+echo "Führe Build aus..."
+npm run build
+
+if [ $? -eq 0 ]; then
+  echo "✅ TypeScript Build erfolgreich"
+else
+  echo "❌ TypeScript Build fehlgeschlagen"
+  echo "Bitte Fehler beheben vor Fortsetzung"
+  exit 1
+fi
+```
+
+### 3. Payload Admin testen
+
+```bash
+echo "🚀 Starte Dev Server für Tests..."
+npm run dev &
+DEV_PID=$!
+
+# Warte bis Server läuft
+echo "Warte auf Server Start..."
+sleep 15
+
+echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo "  📋 MANUELLE TEST-CHECKLISTE"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "Öffne: http://localhost:3000/admin"
+echo ""
+echo "Teste folgendes:"
+echo "- [ ] Header Global ist editierbar"
+echo "- [ ] Footer Global ist editierbar"
+echo "- [ ] Logo Upload funktioniert"
+echo "- [ ] Navigation Links können hinzugefügt werden"
+echo "- [ ] CTA Button hat ShadCN Variants (default, outline, ghost, link)"
+echo "- [ ] Neue Seite kann erstellt werden"
+echo "- [ ] Hero Block kann zu Seite hinzugefügt werden"
+echo "- [ ] Alle Hero-Typen sind auswählbar"
+echo "- [ ] Alle anderen Blocks sind verfügbar"
+echo "- [ ] Conditional Fields funktionieren (z.B. Image nur bei Heroes mit Bild)"
+echo "- [ ] RichText Editor funktioniert"
+echo "- [ ] Media Upload funktioniert"
+echo "- [ ] Alle Blocks sind editierbar"
+echo "- [ ] Deutsche Labels überall vorhanden"
+echo "- [ ] Keine Fehlermeldungen in Browser Console"
+echo "- [ ] Keine Fehlermeldungen in Server Console"
+echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "Drücke Enter wenn Tests abgeschlossen..."
+read
+
+# Dev Server beenden
+kill $DEV_PID
+echo "✅ Dev Server gestoppt"
+```
+
+### 4. Dokumentation generieren
 
 ```typescript
-// filepath: .temp/generation-report.json
-const report = {
-  timestamp: new Date().toISOString(),
-  branch: config.branch,
-  status: 'success',
-  relume: {
-    owner: config.relume.owner,
-    repo: config.relume.repo,
-    branch: config.relume.branch,
-  },
-  components: {
-    navbar: config.components.navbar.name,
-    footer: config.components.footer.name,
-    heroes: config.components.heroes.map(h => h.originalName),
-    blocks: config.components.blocks.map(b => b.name),
-  },
-  stats: {
-    totalComponents: 2 + config.components.heroes.length + config.components.blocks.length,
-    heroes: config.components.heroes.length,
-    blocks: config.components.blocks.length,
-    migrations: fs.readdirSync('src/migrations').filter(f => f.endsWith('.ts')).length,
-    categories: Object.keys(
-      config.components.blocks.reduce((acc, b) => {
-        acc[b.category] = true;
-        return acc;
-      }, {})
-    ),
-  },
-  files: {
-    created: countCreatedFiles(),
-    modified: ['payload.config.ts', 'README.md', 'package.json'],
-  },
-  features: {
-    shadcnButtons: true,
-    germanLabels: true,
-    relumeDesignPreserved: true,
-    tailwindClassesPreserved: true,
-    responsiveDesign: true,
-    migrationsExecuted: true,
-  },
-  nextSteps: [
-    'Merge feature branch into main',
-    'Fill Admin Panel with content',
-    'Upload logo and images to Media Library',
-    'Create initial pages with Heroes and Blocks',
-    'Configure Header and Footer globals',
-    'Test responsive design',
-    'Configure SEO settings',
-    'Deploy to production',
-  ],
-};
-
-fs.writeFileSync(
-  '.temp/generation-report.json',
-  JSON.stringify(report, null, 2)
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
 );
 
-console.log('✅ Success Report generiert: .temp/generation-report.json');
+const heroAnalysis = JSON.parse(
+  fs.readFileSync('.temp/analysis/heroes-analysis.json', 'utf-8')
+);
 
-// Ausgabe auf Console
-console.log('\n' + JSON.stringify(report, null, 2));
-```
+const blockAnalysis = JSON.parse(
+  fs.readFileSync('.temp/analysis/blocks-analysis.json', 'utf-8')
+);
 
-### 10. Merge Anleitung ausgeben
+const documentation = `# Website Generierung - Dokumentation
 
-```bash
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-echo "  🎊 WEBSITE GENERATION ERFOLGREICH ABGESCHLOSSEN! 🎊"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-echo "📁 Branch: ${config.branch}"
-echo "📦 Komponenten: $(( 2 + ${config.components.heroes.length} + ${config.components.blocks.length} ))"
-echo "🔄 Migrationen: $(ls src/migrations/*.ts | wc -l)"
-echo ""
-echo "📝 Dokumentation:"
-echo "   - WEBSITE_GENERATION.md"
-echo "   - README.md (updated)"
-echo "   - .temp/generation-report.json"
-echo ""
-echo "───────────────────────────────────────────────────────────────"
-echo ""
-echo "🚀 Nächster Schritt: Branch Mergen"
-echo ""
-echo "Option 1 - Pull Request (empfohlen):"
-echo "  1. Gehe zu GitHub Repository"
-echo "  2. Erstelle Pull Request von ${config.branch}"
-echo "  3. Review & Merge"
-echo ""
-echo "Option 2 - Direct Merge:"
-echo "  git checkout main"
-echo "  git merge ${config.branch}"
-echo "  git push origin main"
-echo "  git branch -d ${config.branch}"
-echo "  git push origin --delete ${config.branch}"
-echo ""
-echo "───────────────────────────────────────────────────────────────"
-echo ""
-echo "✨ Die Website ist bereit für die Inhaltserstellung!"
-echo ""
-echo "Admin Panel: http://localhost:3000/admin"
-echo ""
-echo "═══════════════════════════════════════════════════════════════"
-```
+Generiert am: ${new Date().toLocaleString('de-DE')}
+Branch: ${buildConfig.branch}
 
-## Erfolgskriterien
+## Übersicht
 
-- [ ] Alle Komponenten vorhanden und validiert
-- [ ] TypeScript Build ohne Fehler
-- [ ] Alle Migrationen erfolgreich
-- [ ] Payload Admin funktioniert einwandfrei
-- [ ] Vollständige Dokumentation erstellt
-- [ ] README.md aktualisiert
-- [ ] Package.json Scripts hinzugefügt
-- [ ] Success Report generiert
-- [ ] Git History sauber
-- [ ] Branch bereit zum Mergen
-- [ ] ShadCN Button Variants überall verwendet
-- [ ] Relume Designs exakt erhalten
-- [ ] Deutsche Labels durchgängig
+Diese Website wurde vollautomatisch aus Relume Komponenten generiert.
+Alle Designs wurden exakt übernommen - keine Custom-Styles!
 
-## Abschluss
+## Konfiguration
 
-Nach erfolgreicher Finalisierung:
-1. ✅ Feature Branch in main mergen
-2. 📝 Team über neue Website informieren
-3. 📚 Dokumentation teilen (WEBSITE_GENERATION.md)
-4. 🎨 Content-Erstellung im Admin Panel planen
-5. 🚀 Production Deployment vorbereiten
+### Input Props
+\`\`\`json
+{
+  "navbar": "${buildConfig.components.navbar.name}",
+  "footer": "${buildConfig.components.footer.name}",
+  "heroes": [${buildConfig.components.heroes.map(h => `"${h.originalName}"`).join(', ')}],
+  "blocks": [${buildConfig.components.blocks.map(b => `"${b.name}"`).join(', ')}]
+}
+\`\`\`
 
-**Die Website ist nun vollständig generiert und bereit für die Inhaltserstellung im PayloadCMS Admin Panel!** 🎉
+### Relume Repository
+- **Lokaler Pfad**: \`${buildConfig.relume.localPath}\`
+- **Base Path**: \`${buildConfig.relume.basePath}\`
+
+## Komponenten
+
+### Header (Global)
+- **Komponente**: ${buildConfig.components.navbar.name}
+- **Quelle**: \`${buildConfig.components.navbar.localPath}\`
+- **Ziel**: \`src/Header/\`
+- **Dateien**: 
+  - \`MobileNav.tsx\` - Mobile Navigation mit Burger Menu
+  - \`DesktopNav.tsx\` - Desktop Navigation
+  - \`config.ts\` - PayloadCMS Global Config
+  - \`hooks/revalidateHeader.ts\` - Cache Revalidation
+  - \`index.tsx\` - Combined Export
+- **Global Slug**: \`header\`
+- **Features**:
+  - Logo Upload
+  - Navigation Array (max 8 Items)
+  - Submenu Support (Dropdown)
+  - CTA Button mit ShadCN Variants
+  - Responsive (lg:hidden / hidden lg:)
+
+### Footer (Global)
+- **Komponente**: ${buildConfig.components.footer.name}
+- **Quelle**: \`${buildConfig.components.footer.localPath}\`
+- **Ziel**: \`src/Footer/\`
+- **Dateien**:
+  - \`MobileFooter.tsx\` - Mobile Layout (stacked)
+  - \`DesktopFooter.tsx\` - Desktop Grid Layout
+  - \`config.ts\` - PayloadCMS Global Config
+  - \`hooks/revalidateFooter.ts\` - Cache Revalidation
+  - \`index.tsx\` - Combined Export
+- **Global Slug**: \`footer\`
+- **Features**:
+  - Logo Upload
+  - Beschreibung (Textarea)
+  - Link Columns (2-4 Spalten)
+  - Social Media Icons (Lucide)
+  - Copyright Text
+  - Responsive Grid/Stack
+
+### Heroes (${buildConfig.components.heroes.length} Typen)
+
+**Shared Config**: \`src/heroes/config.ts\`
+- **Block Slug**: \`hero\`
+- **Smart Conditionals**: Felder erscheinen nur für relevante Hero-Typen
+- **ShadCN Button Variants**: default, outline, ghost, link
+
+${buildConfig.components.heroes.map((hero, idx) => {
+  const analysis = heroAnalysis[idx];
+  return `#### ${hero.originalName} → ${hero.name}
+- **Quelle**: \`${hero.localPath}\`
+- **Ziel**: \`src/heroes/${hero.name}/index.tsx\`
+- **Features**:
+  - Heading & Subheading (RichText)
+  ${analysis.hasImage ? '- Image Upload' : ''}
+  ${analysis.hasVideo ? '- Background Video' : ''}
+  ${analysis.hasFeatures ? '- Feature List mit Icons' : ''}
+  ${analysis.hasStats ? '- Statistics Grid' : ''}
+  ${analysis.hasTestimonial ? '- Testimonial mit Avatar' : ''}
+  - Buttons (max 3) mit ShadCN Variants`;
+}).join('\n\n')}
+
+### Content Blocks (${buildConfig.components.blocks.length} Typen)
+
+${Object.entries(
+  buildConfig.components.blocks.reduce((acc, block, idx) => {
+    if (!acc[block.category]) acc[block.category] = [];
+    acc[block.category].push({ ...block, analysis: blockAnalysis[idx] });
+    return acc;
+  }, {})
+).map(([category, blocks]) => `#### ${category} (${blocks.length} Blocks)
+
+${blocks.map(b => `##### ${b.name}
+- **Quelle**: \`${b.localPath}\`
+- **Ziel**: \`src/blocks/${b.category}/${b.name}/\`
+- **Block Slug**: \`${b.name.toLowerCase()}\`
+- **Dateien**: Component.tsx, config.ts, index.ts
+- **Features**:
+  ${b.analysis.hasHeading ? '- Heading & Description (RichText)' : ''}
+  ${b.analysis.hasImage ? '- Image Upload' : ''}
+  ${b.analysis.hasButtons ? \`- Buttons (\${b.analysis.buttonCount}) mit ShadCN Variants\` : ''}
+  ${b.analysis.hasForm ? '- Form Integration' : ''}
+  ${b.analysis.hasGrid ? '- Grid Layout' : ''}
+  ${b.analysis.hasCards ? '- Card Components' : ''}
+  ${b.analysis.hasTestimonials ? '- Testimonials' : ''}
+  ${b.analysis.hasFAQ ? '- FAQ Accordion' : ''}`).join('\n\n')}
+`).join('\n\n')}
+
+## Verwendung
+
+### 1. Header/Footer bearbeiten
+
+\`\`\`bash
+# Öffne Admin Panel
+npm run dev
+# Gehe zu http://localhost:3000/admin
+# Navigiere zu "Globale Einstellungen" > "Kopfzeile" oder "Fußzeile"
+\`\`\`
+
+**Header Felder:**
+- Logo (Upload)
+- Navigation Links (Array, max 8)
+  - Label
+  - Link (Page oder URL)
+  - Submenu (Optional)
+- CTA Button
+  - Text
+  - Link (Page oder URL)
+  - Variant (default, outline, ghost, link)
+
+**Footer Felder:**
+- Logo (Upload, optional)
+- Beschreibung (Textarea)
+- Spalten (Array, 2-4)
+  - Heading
+  - Links Array (Label + Link)
+- Social Media (Array)
+  - Platform (Select: Facebook, Twitter, Instagram, LinkedIn, YouTube, GitHub)
+  - URL
+- Copyright Text
+
+### 2. Neue Seite erstellen
+
+\`\`\`bash
+# Admin Panel > Seiten > Neue Seite erstellen
+\`\`\`
+
+**Layout Blocks verfügbar:**
+1. **Hero Block** (${buildConfig.components.heroes.length} Typen)
+   - Wähle Hero Typ aus Dropdown
+   - Felder erscheinen dynamisch basierend auf Typ
+   - Buttons mit ShadCN Variants
+
+2. **Content Blocks** (${buildConfig.components.blocks.length} verfügbar)
+   - Kategorien: ${Object.keys(
+     buildConfig.components.blocks.reduce((acc, b) => {
+       acc[b.category] = true;
+       return acc;
+     }, {})
+   ).join(', ')}
+   - Jeder Block mit deutschen Labels
+   - RichText für Beschreibungen
+   - Media Upload für Bilder
+   - Buttons mit ShadCN Variants
+
+### 3. Button Styling
+
+**WICHTIG**: Alle Buttons verwenden ausschließlich ShadCN UI Variants:
+
+\`\`\`typescript
+import { Button } from '@/components/ui/button'
+
+// Verfügbare Variants:
+<Button variant="default">  {/* Gefüllt, Primary Color */}
+<Button variant="outline">  {/* Rahmen, transparent */}
+<Button variant="ghost">    {/* Vollständig transparent */}
+<Button variant="link">     {/* Als Link gestylt */}
+\`\`\`
+
+**KEINE Custom-Styles!** Nur die Variants aus \`components/ui/button.tsx\`.
+
+### 4. Responsive Design
+
+Alle Komponenten verwenden Tailwind Breakpoints:
+- Mobile: Default (keine Prefix)
+- Tablet: \`md:\` (768px+)
+- Desktop: \`lg:\` (1024px+)
+
+Navigation:
+- Mobile: \`lg:hidden\` - Burger Menu
+- Desktop: \`hidden lg:block\` - Horizontal Nav
+
+## Design Preservation
+
+✅ **Alle Original Relume Designs wurden exakt übernommen**
+
+### Was beibehalten wurde:
+- Alle Tailwind Classes (z.B. \`px-[5%]\`, \`py-16 md:py-24 lg:py-28\`)
+- Grid Layouts (z.B. \`grid-cols-1 lg:grid-cols-2\`)
+- Spacing (z.B. \`gap-x-20 gap-y-12\`)
+- Typography (z.B. \`text-6xl font-bold md:text-9xl\`)
+- Responsive Breakpoints (md:, lg:)
+- Container Struktur
+
+### Was geändert wurde:
+- ❌ Hardcoded Daten → ✅ PayloadCMS Props
+- ❌ Custom Button Styles → ✅ ShadCN Variants
+- ❌ Static Content → ✅ Dynamic CMS Content
+
+### Was NICHT geändert wurde:
+- Layout & Struktur
+- Tailwind Classes
+- Spacing & Sizing
+- Responsive Behavior
+- Visual Design
+
+## Technologie Stack
+
+- **PayloadCMS 3.0** - Headless CMS
+- **Next.js 14** - React Framework
+- **TypeScript** - Type Safety
+- **Tailwind CSS** - Utility-First CSS
+- **ShadCN UI** - Component Library
+- **Lucide React** - Icon Library
+- **Relume** - Component Source
+
+## Migrations
+
+Ausgeführte Migrationen:
+\`\`\`bash
+$(ls src/migrations/*.ts | sed 's/src\/migrations\//- /')
+\`\`\`
+
+## Nächste Schritte
+
+### Sofort:
+1. ✅ Content im Admin Panel eingeben
+2. ✅ Logo hochladen (Header & Footer)
+3. ✅ Navigation Links konfigurieren
+4. ✅ Footer Spalten füllen
+5. ✅ Erste Test-Seiten erstellen
+
+### Später:
+6. ⏳ SEO Felder konfigurieren (falls vorhanden)
+7. ⏳ Media Library mit Bildern füllen
+8. ⏳ Alle Seiten mit Content füllen
+9. ⏳ Finale Tests (Desktop + Mobile)
+10. ⏳ Production Deployment
+

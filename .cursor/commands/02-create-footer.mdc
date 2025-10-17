@@ -1,54 +1,55 @@
 ---
-description: Footer Komponente aus Relume GitHub laden und konvertieren
+description: Footer Komponente aus geklontem Relume Repo laden und konvertieren
 ---
 
 # Schritt 2: Footer erstellen
 
 ## Input
-- Props: `footer` (z.B. "Footer1")
 - Build Config: `.temp/build-config.json`
 
 ## Aufgaben
 
-### 1. Relume Komponente von GitHub laden
+### 1. Footer Code aus geklontem Repo laden
 
-```typescript
-// Lade Build Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
-const footerConfig = config.components.footer;
+```bash
+echo "📥 Lade Footer Code..."
 
-console.log(`📥 Lade ${footerConfig.name} von GitHub...`);
-console.log(`   Path: ${footerConfig.path}`);
+BUILD_CONFIG=$(cat .temp/build-config.json)
+FOOTER_NAME=$(echo $BUILD_CONFIG | jq -r '.components.footer.name')
+FOOTER_PATH=$(echo $BUILD_CONFIG | jq -r '.components.footer.localPath')
 
-// GitHub MCP Call
-const footerCode = await mcp.tools.github.read_file({
-  owner: config.relume.owner,
-  repo: config.relume.repo,
-  path: footerConfig.path,
-  branch: config.relume.branch
-});
+if [ ! -f "$FOOTER_PATH" ]; then
+  echo "❌ Footer nicht gefunden: $FOOTER_PATH"
+  exit 1
+fi
 
-// Speichern für Analyse
-fs.writeFileSync(
-  `.temp/relume-components/footer/${footerConfig.name}.tsx`,
-  footerCode
-);
+mkdir -p .temp/relume-components/footer
+cp "$FOOTER_PATH" ".temp/relume-components/footer/${FOOTER_NAME}.tsx"
 
-console.log('✅ Footer Code geladen und gespeichert');
+echo "✅ Footer Code geladen: ${FOOTER_NAME}"
+echo "   Quelle: $FOOTER_PATH"
 ```
 
 ### 2. Code analysieren
 
 ```typescript
-// Analysiere den Relume Code
+const footerName = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+).components.footer.name;
+
+const footerCode = fs.readFileSync(
+  `.temp/relume-components/footer/${footerName}.tsx`,
+  'utf-8'
+);
+
 const analysis = {
+  name: footerName,
   hasLogo: footerCode.includes('logo') || footerCode.includes('Logo'),
   hasColumns: footerCode.includes('column') || footerCode.includes('grid'),
   hasSocialMedia: footerCode.includes('social') || footerCode.includes('Social'),
   hasCopyright: footerCode.includes('copyright') || footerCode.includes('©'),
   hasNewsletter: footerCode.includes('newsletter') || footerCode.includes('subscribe'),
   columnCount: (footerCode.match(/column/gi) || []).length,
-  tailwindClasses: extractTailwindClasses(footerCode),
 };
 
 fs.writeFileSync(
@@ -56,7 +57,8 @@ fs.writeFileSync(
   JSON.stringify(analysis, null, 2)
 );
 
-console.log('✅ Code Analyse abgeschlossen');
+console.log('✅ Footer Analyse abgeschlossen');
+console.log(JSON.stringify(analysis, null, 2));
 ```
 
 ### 3. MobileFooter.tsx erstellen
@@ -70,20 +72,29 @@ import type { Footer } from '@/payload-types'
 import { Button } from '@/components/ui/button'
 import { Media } from '@/components/Media'
 import { CMSLink } from '@/components/CMSLink'
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Github } from 'lucide-react'
 
 interface MobileFooterProps {
   footer: Footer
 }
 
+const SocialIcon = ({ platform }: { platform: string }) => {
+  const icons: Record<string, any> = {
+    facebook: Facebook,
+    twitter: Twitter,
+    instagram: Instagram,
+    linkedin: Linkedin,
+    youtube: Youtube,
+    github: Github,
+  }
+  const Icon = icons[platform.toLowerCase()] || Facebook
+  return <Icon className="h-5 w-5" />
+}
+
 export const MobileFooter: React.FC<MobileFooterProps> = ({ footer }) => {
-  // WICHTIG: Original Relume Code hier einfügen
-  // NUR Datenquelle ändern - KEINE Styles ändern!
-  // Tailwind Classes EXAKT beibehalten
-  
   return (
     <footer className="lg:hidden px-[5%] py-12">
       <div className="container">
-        {/* Logo */}
         {footer.logo && (
           <div className="mb-8">
             <Media 
@@ -93,7 +104,6 @@ export const MobileFooter: React.FC<MobileFooterProps> = ({ footer }) => {
           </div>
         )}
         
-        {/* Columns - Stack vertical on mobile */}
         <div className="space-y-8">
           {footer.columns?.map((column, index) => (
             <div key={index}>
@@ -118,7 +128,6 @@ export const MobileFooter: React.FC<MobileFooterProps> = ({ footer }) => {
           ))}
         </div>
         
-        {/* Social Media */}
         {footer.socialMedia && footer.socialMedia.length > 0 && (
           <div className="mt-8 flex gap-4">
             {footer.socialMedia.map((social, index) => (
@@ -134,14 +143,13 @@ export const MobileFooter: React.FC<MobileFooterProps> = ({ footer }) => {
                   rel="noopener noreferrer"
                   aria-label={social.platform}
                 >
-                  {/* Icon based on platform */}
+                  <SocialIcon platform={social.platform} />
                 </a>
               </Button>
             ))}
           </div>
         )}
         
-        {/* Copyright */}
         {footer.copyright && (
           <div className="mt-8 pt-8 border-t text-sm text-muted-foreground">
             {footer.copyright}
@@ -164,9 +172,23 @@ import type { Footer } from '@/payload-types'
 import { Button } from '@/components/ui/button'
 import { Media } from '@/components/Media'
 import { CMSLink } from '@/components/CMSLink'
+import { Facebook, Twitter, Instagram, Linkedin, Youtube, Github } from 'lucide-react'
 
 interface DesktopFooterProps {
   footer: Footer
+}
+
+const SocialIcon = ({ platform }: { platform: string }) => {
+  const icons: Record<string, any> = {
+    facebook: Facebook,
+    twitter: Twitter,
+    instagram: Instagram,
+    linkedin: Linkedin,
+    youtube: Youtube,
+    github: Github,
+  }
+  const Icon = icons[platform.toLowerCase()] || Facebook
+  return <Icon className="h-5 w-5" />
 }
 
 export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
@@ -174,7 +196,6 @@ export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
     <footer className="hidden lg:block px-[5%] py-16">
       <div className="container">
         <div className="grid grid-cols-12 gap-8">
-          {/* Logo Column */}
           <div className="col-span-4">
             {footer.logo && (
               <Media 
@@ -189,7 +210,6 @@ export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
             )}
           </div>
           
-          {/* Link Columns */}
           {footer.columns?.map((column, index) => (
             <div key={index} className="col-span-2">
               {column.heading && (
@@ -213,16 +233,13 @@ export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
           ))}
         </div>
         
-        {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t flex items-center justify-between">
-          {/* Copyright */}
           {footer.copyright && (
             <p className="text-sm text-muted-foreground">
               {footer.copyright}
             </p>
           )}
           
-          {/* Social Media */}
           {footer.socialMedia && footer.socialMedia.length > 0 && (
             <div className="flex gap-2">
               {footer.socialMedia.map((social, index) => (
@@ -238,7 +255,7 @@ export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
                     rel="noopener noreferrer"
                     aria-label={social.platform}
                   >
-                    {/* Icon based on platform */}
+                    <SocialIcon platform={social.platform} />
                   </a>
                 </Button>
               ))}
@@ -251,7 +268,7 @@ export const DesktopFooter: React.FC<DesktopFooterProps> = ({ footer }) => {
 }
 ```
 
-### 5. PayloadCMS Config mit ShadCN Variants
+### 5. PayloadCMS Config
 
 ```typescript
 // filepath: src/Footer/config.ts
@@ -380,27 +397,6 @@ export const Footer: GlobalConfig = {
         description: 'Copyright-Text am unteren Rand',
       },
     },
-    {
-      name: 'legalLinks',
-      type: 'array',
-      label: 'Rechtliche Links',
-      admin: {
-        description: 'Impressum, Datenschutz, etc.',
-      },
-      fields: [
-        {
-          name: 'label',
-          type: 'text',
-          label: 'Beschriftung',
-        },
-        {
-          name: 'page',
-          type: 'relationship',
-          relationTo: 'pages',
-          label: 'Seite',
-        },
-      ],
-    },
   ],
   hooks: {
     afterChange: [revalidateFooter],
@@ -409,6 +405,10 @@ export const Footer: GlobalConfig = {
 ```
 
 ### 6. Hook erstellen
+
+```bash
+mkdir -p src/Footer/hooks
+```
 
 ```typescript
 // filepath: src/Footer/hooks/revalidateFooter.ts
@@ -454,12 +454,18 @@ export const Footer: React.FC<FooterProps> = ({ footer }) => {
 ### 8. Migration erstellen
 
 ```bash
+echo "📝 Erstelle Migration für Footer..."
 npm run payload migrate:create -- --name add-footer-global
 
-echo "Migration erstellt, führe aus..."
+echo "🔄 Führe Migration aus..."
 npm run payload migrate
 
-echo "✅ Migration erfolgreich ausgeführt"
+if [ $? -eq 0 ]; then
+  echo "✅ Migration erfolgreich ausgeführt"
+else
+  echo "❌ Migration fehlgeschlagen"
+  exit 1
+fi
 ```
 
 ### 9. In payload.config.ts registrieren
@@ -483,41 +489,49 @@ export default buildConfig({
 ### 10. Git Commit
 
 ```bash
+FOOTER_NAME=$(cat .temp/build-config.json | jq -r '.components.footer.name')
+
 git add src/Footer/
 git add src/payload.config.ts
 git add src/migrations/
 
-git commit -m "feat(footer): add ${footerConfig.name} footer
+git commit -m "feat(footer): add ${FOOTER_NAME} footer
 
-Source: relume/Footer/${footerConfig.name}.tsx
+Source: ${FOOTER_NAME}.tsx from cloned Relume repo
 Components:
-- MobileFooter.tsx
-- DesktopFooter.tsx
-- config.ts with German UX
+- MobileFooter.tsx (responsive mobile layout)
+- DesktopFooter.tsx (desktop grid layout)
+- config.ts with German UX labels
 - revalidateFooter hook
+- index.tsx export
 
+Features:
 ✅ Original Relume design preserved
 ✅ All Tailwind classes maintained
-✅ ShadCN Button variants used
-✅ Migration executed
-✅ Registered in payload.config.ts"
+✅ ShadCN Button variants for social icons
+✅ Lucide icons (Facebook, Twitter, Instagram, etc.)
+✅ Responsive columns (stack mobile, grid desktop)
+✅ German PayloadCMS labels
+✅ Migration executed successfully
+✅ Registered in payload.config.ts
+
+No custom styles - pure ShadCN components!"
 
 echo "✅ Git Commit erstellt"
 ```
 
 ## Erfolgskriterien
 
-- [ ] Footer Code erfolgreich von GitHub geladen
+- [ ] Footer Code erfolgreich geladen
 - [ ] Code Analyse durchgeführt
-- [ ] MobileFooter.tsx mit originalem Relume Design
-- [ ] DesktopFooter.tsx mit originalem Relume Design
+- [ ] MobileFooter.tsx erstellt
+- [ ] DesktopFooter.tsx erstellt
 - [ ] config.ts mit deutschen Labels
-- [ ] Nur ShadCN Button Variants verwendet (keine Custom-Styles!)
-- [ ] revalidateFooter Hook vorhanden
-- [ ] Migration erfolgreich ausgeführt
+- [ ] Nur ShadCN Button Variants (keine Custom-Styles!)
+- [ ] Lucide Icons für Social Media
+- [ ] Migration erfolgreich
 - [ ] In payload.config.ts registriert
 - [ ] Git Commit erstellt
-- [ ] Alle Tailwind Classes exakt beibehalten
 
 ## Nächster Schritt
 `.cursor/commands/03-create-heroes.mdc`

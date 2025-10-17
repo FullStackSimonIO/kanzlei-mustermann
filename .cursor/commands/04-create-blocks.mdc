@@ -1,11 +1,10 @@
 ---
-description: Alle Block Komponenten aus Relume GitHub laden und konvertieren
+description: Alle Block Komponenten aus geklontem Relume Repo laden und konvertieren
 ---
 
 # Schritt 4: Blocks erstellen
 
 ## Input
-- Props: `blocks` (z.B. ["Layout1", "CTA2", "FAQ5", "Contact1"])
 - Build Config: `.temp/build-config.json`
 
 ## Relume Repository Struktur
@@ -17,42 +16,55 @@ Blocks sind in Kategorien organisiert:
 - `relume/FAQ/` - FAQ Komponenten
 - `relume/Contact/` - Kontakt Komponenten
 - `relume/Gallery/` - Galerie Komponenten
-- `relume/Events/` - Event Komponenten
 - etc.
 
 ## Aufgaben
 
-### 1. Alle Block Komponenten von GitHub laden
+### 1. Alle Block Komponenten aus geklontem Repo laden
+
+```bash
+echo "📥 Lade Block Komponenten..."
+
+BUILD_CONFIG=$(cat .temp/build-config.json)
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+
+mkdir -p .temp/relume-components/blocks
+
+echo "Lade $BLOCK_COUNT Blocks..."
+
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_CATEGORY=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].category")
+  BLOCK_PATH=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].localPath")
+  
+  if [ ! -f "$BLOCK_PATH" ]; then
+    echo "❌ Block nicht gefunden: $BLOCK_NAME ($BLOCK_PATH)"
+    exit 1
+  fi
+  
+  mkdir -p ".temp/relume-components/blocks/${BLOCK_CATEGORY}"
+  cp "$BLOCK_PATH" ".temp/relume-components/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}.tsx"
+  echo "✅ Geladen: $BLOCK_NAME ($BLOCK_CATEGORY)"
+done
+
+echo "✅ Alle $BLOCK_COUNT Blocks geladen"
+```
+
+### 2. Alle Blocks analysieren
 
 ```typescript
-// Lade Build Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
-const blocksConfig = config.components.blocks;
-
-console.log(`📥 Lade ${blocksConfig.length} Blocks von GitHub...`);
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+);
 
 const blockAnalysis = [];
 
-for (const block of blocksConfig) {
-  console.log(`   Loading: ${block.name} (${block.category}/${block.name})`);
-  
-  // GitHub MCP Call
-  const blockCode = await mcp.tools.github.read_file({
-    owner: config.relume.owner,
-    repo: config.relume.repo,
-    path: block.path,
-    branch: config.relume.branch
-  });
-  
-  // Speichern für Analyse
-  const categoryDir = `.temp/relume-components/blocks/${block.category}`;
-  fs.mkdirSync(categoryDir, { recursive: true });
-  fs.writeFileSync(
-    `${categoryDir}/${block.name}.tsx`,
-    blockCode
+for (const block of buildConfig.components.blocks) {
+  const blockCode = fs.readFileSync(
+    `.temp/relume-components/blocks/${block.category}/${block.name}.tsx`,
+    'utf-8'
   );
   
-  // Analysiere Komponente
   const analysis = {
     name: block.name,
     category: block.category,
@@ -70,21 +82,20 @@ for (const block of blocksConfig) {
   };
   
   blockAnalysis.push(analysis);
-  console.log(`   ✅ ${block.name} geladen und analysiert`);
+  console.log(`✅ Analysiert: ${block.name} (${block.category})`);
 }
 
-// Speichere Gesamt-Analyse
 fs.writeFileSync(
   '.temp/analysis/blocks-analysis.json',
   JSON.stringify(blockAnalysis, null, 2)
 );
 
-console.log('✅ Alle Blocks geladen und analysiert');
+console.log(`✅ Alle ${blockAnalysis.length} Blocks analysiert`);
 ```
 
-### 2. Block Configs erstellen
+### 3. Block Configs erstellen
 
-Für jeden Block in `blocksConfig`:
+Für jeden Block eine Config:
 
 ```typescript
 // filepath: src/blocks/{Category}/{BlockName}/config.ts
@@ -93,11 +104,10 @@ import type { Block } from 'payload'
 export const {BlockName}Block: Block = {
   slug: '{blockSlug}', // z.B. 'cta2', 'faq5', 'contact1'
   labels: {
-    singular: '{Block Label Singular}', // z.B. 'Call-to-Action'
-    plural: '{Block Label Plural}', // z.B. 'Call-to-Actions'
+    singular: '{Block Label}',
+    plural: '{Block Label Plural}',
   },
   fields: [
-    // Basis Felder (fast jeder Block hat diese)
     {
       name: 'heading',
       type: 'text',
@@ -114,83 +124,14 @@ export const {BlockName}Block: Block = {
         description: 'Beschreibungstext unter der Überschrift',
       },
     },
-    
-    // Conditional: Nur wenn Block Bilder hat
-    ...(analysis.hasImage ? [{
-      name: 'image',
-      type: 'upload',
-      relationTo: 'media',
-      label: 'Bild',
-    }] : []),
-    
-    // Conditional: Nur wenn Block Buttons hat
-    ...(analysis.hasButtons ? [{
-      name: 'buttons',
-      type: 'array',
-      label: 'Buttons',
-      maxRows: analysis.buttonCount || 2,
-      fields: [
-        {
-          name: 'text',
-          type: 'text',
-          label: 'Button Text',
-          required: true,
-        },
-        {
-          name: 'link',
-          type: 'group',
-          label: 'Link',
-          fields: [
-            {
-              name: 'type',
-              type: 'select',
-              options: [
-                { label: 'Interne Seite', value: 'page' },
-                { label: 'Externe URL', value: 'url' },
-              ],
-              defaultValue: 'page',
-            },
-            {
-              name: 'page',
-              type: 'relationship',
-              relationTo: 'pages',
-              admin: {
-                condition: (_, siblingData) => siblingData?.type === 'page',
-              },
-            },
-            {
-              name: 'url',
-              type: 'text',
-              admin: {
-                condition: (_, siblingData) => siblingData?.type === 'url',
-              },
-            },
-          ],
-        },
-        {
-          name: 'variant',
-          type: 'select',
-          label: 'Button Stil',
-          options: [
-            { label: 'Standard', value: 'default' },
-            { label: 'Outline', value: 'outline' },
-            { label: 'Ghost', value: 'ghost' },
-            { label: 'Link', value: 'link' },
-          ],
-          defaultValue: 'default',
-        },
-      ],
-    }] : []),
-    
     // Spezielle Felder basierend auf Block-Typ
-    // Siehe spezielle Config Templates unten
+    // (siehe unten für Templates)
   ],
 }
 ```
 
-### 3. Spezielle Block Config Templates
+**FAQ Block Template:**
 
-**FAQ Block:**
 ```typescript
 // filepath: src/blocks/FAQ/{FAQBlockName}/config.ts
 import type { Block } from 'payload'
@@ -239,7 +180,8 @@ export const {FAQBlockName}Block: Block = {
 }
 ```
 
-**CTA Block:**
+**CTA Block Template:**
+
 ```typescript
 // filepath: src/blocks/CTA/{CTABlockName}/config.ts
 import type { Block } from 'payload'
@@ -329,7 +271,8 @@ export const {CTABlockName}Block: Block = {
 }
 ```
 
-**Contact Block:**
+**Contact Block Template:**
+
 ```typescript
 // filepath: src/blocks/Contact/{ContactBlockName}/config.ts
 import type { Block } from 'payload'
@@ -379,42 +322,12 @@ export const {ContactBlockName}Block: Block = {
       label: 'Formular anzeigen',
       defaultValue: true,
     },
-    {
-      name: 'formFields',
-      type: 'array',
-      label: 'Formular Felder',
-      admin: {
-        condition: (data) => data.showForm,
-      },
-      fields: [
-        {
-          name: 'label',
-          type: 'text',
-          label: 'Beschriftung',
-        },
-        {
-          name: 'type',
-          type: 'select',
-          label: 'Feld-Typ',
-          options: [
-            { label: 'Text', value: 'text' },
-            { label: 'E-Mail', value: 'email' },
-            { label: 'Telefon', value: 'tel' },
-            { label: 'Textarea', value: 'textarea' },
-          ],
-        },
-        {
-          name: 'required',
-          type: 'checkbox',
-          label: 'Pflichtfeld',
-        },
-      ],
-    },
   ],
 }
 ```
 
-**Gallery Block:**
+**Gallery Block Template:**
+
 ```typescript
 // filepath: src/blocks/Gallery/{GalleryBlockName}/config.ts
 import type { Block } from 'payload'
@@ -469,7 +382,26 @@ export const {GalleryBlockName}Block: Block = {
 
 ### 4. Block Components erstellen
 
-Für jeden Block in `blocksConfig`:
+```bash
+echo "📝 Erstelle Block Komponenten..."
+
+BUILD_CONFIG=$(cat .temp/build-config.json)
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_CATEGORY=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].category")
+  BLOCK_DIR="src/blocks/${BLOCK_CATEGORY}/${BLOCK_NAME}"
+  
+  mkdir -p "$BLOCK_DIR"
+  
+  echo "Creating $BLOCK_DIR/{Component.tsx, config.ts, index.ts}..."
+done
+
+echo "✅ Block Komponenten Struktur erstellt"
+```
+
+Für jeden Block:
 
 ```typescript
 // filepath: src/blocks/{Category}/{BlockName}/Component.tsx
@@ -487,15 +419,13 @@ interface {BlockName}Props {
 }
 
 export const {BlockName}: React.FC<{BlockName}Props> = ({ data }) => {
-  // WICHTIG: Original Relume Code hier einfügen
-  // NUR Datenquelle ändern - KEINE Styles ändern!
-  // Tailwind Classes EXAKT beibehalten
-  // Buttons NUR mit ShadCN Variants
+  // WICHTIG: Original Relume Code aus
+  // .temp/relume-components/blocks/{Category}/{BlockName}.tsx
+  // hier einfügen und NUR Datenquelle ändern!
   
   return (
     <section className="px-[5%] py-16 md:py-24 lg:py-28">
       <div className="container">
-        {/* Heading */}
         {data.heading && (
           <div className="mb-12 text-center md:mb-18 lg:mb-20">
             <h2 className="mb-5 text-5xl font-bold md:mb-6 md:text-7xl lg:text-8xl">
@@ -512,7 +442,6 @@ export const {BlockName}: React.FC<{BlockName}Props> = ({ data }) => {
         {/* Block-spezifischer Content hier */}
         {/* Original Relume JSX mit PayloadCMS data binding */}
         
-        {/* Buttons - NUR ShadCN Variants! */}
         {data.buttons && data.buttons.length > 0 && (
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             {data.buttons.map((button, index) => (
@@ -535,6 +464,7 @@ export const {BlockName}: React.FC<{BlockName}Props> = ({ data }) => {
 ```
 
 **FAQ Component Beispiel:**
+
 ```typescript
 // filepath: src/blocks/FAQ/{FAQBlockName}/Component.tsx
 'use client'
@@ -554,7 +484,6 @@ export const {FAQBlockName}: React.FC<{FAQBlockName}Props> = ({ data }) => {
   return (
     <section className="px-[5%] py-16 md:py-24 lg:py-28">
       <div className="container max-w-4xl">
-        {/* Heading */}
         {data.heading && (
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-4xl font-bold md:text-5xl">
@@ -568,7 +497,6 @@ export const {FAQBlockName}: React.FC<{FAQBlockName}Props> = ({ data }) => {
           </div>
         )}
         
-        {/* FAQs */}
         <div className="space-y-4">
           {data.faqs?.map((faq, index) => (
             <div
@@ -614,19 +542,26 @@ export { {BlockName}Block } from './config'
 
 ```typescript
 // filepath: src/blocks/index.tsx
-// Import all blocks by category
-${blocksConfig.map(block => 
+'use client'
+
+import React from 'react'
+
+// Import all blocks aus build config
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+);
+
+${buildConfig.components.blocks.map(block => 
   `import { ${block.name} } from './${block.category}/${block.name}'`
 ).join('\n')}
 
 // Export all block configs
-${blocksConfig.map(block => 
+${buildConfig.components.blocks.map(block => 
   `export { ${block.name}Block } from './${block.category}/${block.name}'`
 ).join('\n')}
 
-// Block Components Map
 export const BlockComponents = {
-  ${blocksConfig.map(block => {
+  ${buildConfig.components.blocks.map(block => {
     const slug = block.name.charAt(0).toLowerCase() + block.name.slice(1);
     return `${slug}: ${block.name}`;
   }).join(',\n  ')}
@@ -658,21 +593,31 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({ blocks }) => {
 }
 ```
 
-### 7. Migration für jeden Block erstellen
+### 7. Migrationen erstellen
 
 ```bash
-# Für jeden Block eine Migration
-echo "Erstelle Migrationen für alle Blocks..."
+echo "📝 Erstelle Migrationen für alle Blocks..."
 
-for block in ${blocksConfig.map(b => b.name).join(' ')}; do
-  echo "  Creating migration for ${block}..."
-  npm run payload migrate:create -- --name "add-${block}-block"
+BUILD_CONFIG=$(cat .temp/build-config.json)
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+
+for i in $(seq 0 $(($BLOCK_COUNT - 1))); do
+  BLOCK_NAME=$(echo $BUILD_CONFIG | jq -r ".components.blocks[$i].name")
+  BLOCK_SLUG=$(echo $BLOCK_NAME | tr '[:upper:]' '[:lower:]')
+  
+  echo "  Migration für ${BLOCK_NAME}..."
+  npm run payload migrate:create -- --name "add-${BLOCK_SLUG}-block"
 done
 
-echo "Führe alle Migrationen aus..."
+echo "🔄 Führe alle Migrationen aus..."
 npm run payload migrate
 
-echo "✅ Alle Migrationen erfolgreich ausgeführt"
+if [ $? -eq 0 ]; then
+  echo "✅ Alle Migrationen erfolgreich ausgeführt"
+else
+  echo "❌ Migration fehlgeschlagen"
+  exit 1
+fi
 ```
 
 ### 8. Alle Blocks in payload.config.ts registrieren
@@ -680,8 +625,12 @@ echo "✅ Alle Migrationen erfolgreich ausgeführt"
 ```typescript
 // filepath: src/payload.config.ts
 // ...existing code...
+import { Header } from './Header/config'
+import { Footer } from './Footer/config'
 import { HeroBlock } from './heroes/config'
-${blocksConfig.map(block => 
+
+// Import all block configs
+${buildConfig.components.blocks.map(block => 
   `import { ${block.name}Block } from './blocks/${block.category}/${block.name}'`
 ).join('\n')}
 
@@ -697,11 +646,15 @@ export default buildConfig({
           type: 'blocks',
           blocks: [
             HeroBlock,
-            ${blocksConfig.map(block => `${block.name}Block`).join(',\n            ')}
+            ${buildConfig.components.blocks.map(block => `${block.name}Block`).join(',\n            ')}
           ],
         },
       ],
     },
+  ],
+  globals: [
+    Header,
+    Footer,
   ],
 })
 ```
@@ -709,43 +662,48 @@ export default buildConfig({
 ### 9. Git Commit
 
 ```bash
+BUILD_CONFIG=$(cat .temp/build-config.json)
+BLOCK_COUNT=$(echo $BUILD_CONFIG | jq '.components.blocks | length')
+
+# Gruppiere Blocks nach Kategorie
+BLOCKS_BY_CATEGORY=$(cat .temp/analysis/blocks-analysis.json | \
+  jq -r 'group_by(.category) | .[] | "\(.[0].category): \([.[].name] | join(", "))"')
+
 git add src/blocks/
 git add src/payload.config.ts
 git add src/migrations/
 
-# Gruppiere Blocks nach Kategorie für Commit Message
-BLOCKS_BY_CATEGORY=$(cat .temp/analysis/blocks-analysis.json | \
-  jq -r 'group_by(.category) | .[] | 
-    "\(.[] | .category): \([.[] | .name] | join(", "))"')
+git commit -m "feat(blocks): add ${BLOCK_COUNT} content blocks
 
-git commit -m "feat(blocks): add content blocks
+Source: Various categories from cloned Relume repo
 
-Sources from relume/{Category}/{BlockName}.tsx
-
-Blocks added by category:
+Blocks by category:
 ${BLOCKS_BY_CATEGORY}
 
-Total: ${blocksConfig.length} blocks
+Total: ${BLOCK_COUNT} blocks
 
-Components:
-${blocksConfig.map(b => `- ${b.name} (${b.category})`).join('\n')}
-
-✅ Each block with Component.tsx, config.ts, index.ts
-✅ RichText, Media, CMSLink properly used
-✅ German UX labels throughout
+Features:
+✅ Each block: Component.tsx, config.ts, index.ts
+✅ RichText, Media, CMSLink integration
+✅ German PayloadCMS labels
 ✅ Original Relume designs preserved
 ✅ All Tailwind classes maintained
-✅ ShadCN Button variants used
-✅ All migrations executed
-✅ Registered in payload.config.ts"
+✅ ShadCN Button variants (default, outline, ghost)
+✅ Lucide icons for interactive elements
+✅ All migrations executed successfully
+✅ All blocks registered in payload.config.ts
+✅ BlockRenderer for dynamic rendering
+
+No custom styles - pure ShadCN components!"
 
 echo "✅ Git Commit erstellt"
 ```
 
 ## Erfolgskriterien
 
-- [ ] Alle Blocks erfolgreich von GitHub geladen
+- [ ] Alle Blocks erfolgreich aus Repo geladen
 - [ ] Blocks korrekt nach Kategorie organisiert
+- [ ] Alle Blocks analysiert
 - [ ] Jeder Block hat vollständige Struktur (Component, config, index)
 - [ ] Spezielle Block-Typen (FAQ, CTA, Contact, Gallery) korrekt konfiguriert
 - [ ] RichText, Media, CMSLink korrekt verwendet
@@ -755,16 +713,6 @@ echo "✅ Git Commit erstellt"
 - [ ] BlockRenderer funktioniert
 - [ ] Git Commit erstellt
 - [ ] Relume Designs exakt beibehalten
-- [ ] Alle Tailwind Classes exakt übernommen
-
-## Wichtige Hinweise
-
-- **ALLE** Blocks aus props müssen verarbeitet werden (kann 10-20+ sein)
-- Relume Design darf NICHT verändert werden
-- Nur Backend-Integration hinzufügen
-- Tailwind Classes beibehalten
-- Struktur und Layout exakt übernehmen
-- Buttons NICHT extra stylen - nur ShadCN variants verwenden
 
 ## Nächster Schritt
 `.cursor/commands/05-finalize.mdc`

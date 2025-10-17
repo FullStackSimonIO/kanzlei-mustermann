@@ -1,0 +1,92 @@
+{
+  "repository": {
+    "url": "https://github.com/your-username/your-relume-repo.git",
+    "branch": "main",
+    "localPath": ".temp/relume-repo"
+  },
+  "structure": {
+    "basePath": "relume",
+    "categories": {
+      "Header": {
+        "path": "relume/Header",
+        "navbars": ["Navbar1", "Navbar2", "Navbar3", "Navbar4", "Navbar5"],
+        "heroes": [
+          "HeroHeader1", "HeroHeader2", "HeroHeader3", "HeroHeader4",
+          "HeroHeader5", "HeroHeader6", "HeroHeader7", "HeroHeader8",
+          "HeroHeader9", "HeroHeader10", "HeroHeader11", "HeroHeader12",
+          "HeroHeader13", "HeroHeader14", "HeroHeader15", "HeroHeader16",
+          "HeroHeader17", "HeroHeader18", "HeroHeader19"
+        ]
+      },
+      "Footer": {
+        "path": "relume/Footer",
+        "components": ["Footer1", "Footer2", "Footer3", "Footer4", "Footer5"]
+      },
+      "Banners": {
+        "path": "relume/Banners",
+        "components": ["Banner1", "Banner2", "Banner3", "Banner4"]
+      },
+      "Blog": {
+        "path": "relume/Blog",
+        "components": ["Blog1", "Blog2", "Blog3", "Blog4", "Blog5"]
+      },
+      "BlogPostHeader": {
+        "path": "relume/BlogPostHeader",
+        "components": ["BlogPostHeader1", "BlogPostHeader2", "BlogPostHeader3"]
+      },
+      "Career": {
+        "path": "relume/Career",
+        "components": ["Career1", "Career2", "Career3"]
+      },
+      "Comparison": {
+        "path": "relume/Comparison",
+        "components": ["Comparison1", "Comparison2"]
+      },
+      "Contact": {
+        "path": "relume/Contact",
+        "components": ["Contact1", "Contact2", "Contact3", "Contact4", "Contact5"]
+      },
+      "ContactModal": {
+        "path": "relume/ContactModal",
+        "components": ["ContactModal1", "ContactModal2"]
+      },
+      "CTA": {
+        "path": "relume/CTA",
+        "components": ["CTA1", "CTA2", "CTA3", "CTA4", "CTA5", "CTA6"]
+      },
+      "EventHeaderItems": {
+        "path": "relume/EventHeaderItems",
+        "components": ["EventHeaderItem1", "EventHeaderItem2"]
+      },
+      "EventHeaders": {
+        "path": "relume/EventHeaders",
+        "components": ["EventHeader1", "EventHeader2", "EventHeader3"]
+      },
+      "Events": {
+        "path": "relume/Events",
+        "components": ["Event1", "Event2", "Event3"]
+      },
+      "FAQ": {
+        "path": "relume/FAQ",
+        "components": ["FAQ1", "FAQ2", "FAQ3", "FAQ4", "FAQ5", "FAQ6"]
+      },
+      "Gallery": {
+        "path": "relume/Gallery",
+        "components": ["Gallery1", "Gallery2", "Gallery3", "Gallery4"]
+      },
+      "Layout": {
+        "path": "relume/Layout",
+        "components": ["Layout1", "Layout2", "Layout3", "Layout4"]
+      },
+      "Team": {
+        "path": "relume/Team",
+        "components": ["Team1", "Team2", "Team3", "Team4"]
+      },
+      "Testimonial": {
+        "path": "relume/Testimonial",
+        "components": ["Testimonial1", "Testimonial2", "Testimonial3", "Testimonial4"]
+      }
+    }
+  },
+  "fileExtension": ".tsx"
+}

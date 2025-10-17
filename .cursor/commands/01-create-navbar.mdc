@@ -1,53 +1,65 @@
 ---
-description: Navbar Komponente aus Relume GitHub laden und konvertieren
+description: Navbar Komponente aus geklontem Relume Repo laden und konvertieren
 ---
 
 # Schritt 1: Navbar erstellen
 
 ## Input
-- Props: `navbar` (z.B. "Navbar1")
 - Build Config: `.temp/build-config.json`
 
 ## Aufgaben
 
-### 1. Relume Komponente von GitHub laden
+### 1. Navbar Code aus geklontem Repo laden
 
-```typescript
-// Lade Build Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
-const navbarConfig = config.components.navbar;
+```bash
+echo "📥 Lade Navbar Code..."
 
-console.log(`📥 Lade ${navbarConfig.name} von GitHub...`);
-console.log(`   Path: ${navbarConfig.path}`);
+# Lade Build Config
+BUILD_CONFIG=$(cat .temp/build-config.json)
+NAVBAR_NAME=$(echo $BUILD_CONFIG | jq -r '.components.navbar.name')
+NAVBAR_PATH=$(echo $BUILD_CONFIG | jq -r '.components.navbar.localPath')
 
-// GitHub MCP Call
-const navbarCode = await mcp.tools.github.read_file({
-  owner: config.relume.owner,
-  repo: config.relume.repo,
-  path: navbarConfig.path,
-  branch: config.relume.branch
-});
+# Check ob Datei existiert
+if [ ! -f "$NAVBAR_PATH" ]; then
+  echo "❌ Navbar nicht gefunden: $NAVBAR_PATH"
+  exit 1
+fi
 
-// Speichern für Analyse
-fs.writeFileSync(
-  `.temp/relume-components/navbar/${navbarConfig.name}.tsx`,
-  navbarCode
-);
+# Kopiere für Analyse
+mkdir -p .temp/relume-components/navbar
+cp "$NAVBAR_PATH" ".temp/relume-components/navbar/${NAVBAR_NAME}.tsx"
 
-console.log('✅ Navbar Code geladen und gespeichert');
+echo "✅ Navbar Code geladen: ${NAVBAR_NAME}"
+echo "   Quelle: $NAVBAR_PATH"
 ```
 
 ### 2. Code analysieren
 
 ```typescript
+const navbarName = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+).components.navbar.name;
+
+const navbarCode = fs.readFileSync(
+  `.temp/relume-components/navbar/${navbarName}.tsx`,
+  'utf-8'
+);
+
 // Analysiere den Relume Code
 const analysis = {
+  name: navbarName,
   hasLogo: navbarCode.includes('logo') || navbarCode.includes('Logo'),
   hasNavLinks: navbarCode.includes('nav') || navbarCode.includes('menu'),
   hasCTA: navbarCode.includes('button') || navbarCode.includes('Button'),
   hasMobileMenu: navbarCode.includes('mobile') || navbarCode.includes('Mobile'),
+  hasDropdown: navbarCode.includes('dropdown') || navbarCode.includes('submenu'),
   buttonCount: (navbarCode.match(/button/gi) || []).length,
-  tailwindClasses: extractTailwindClasses(navbarCode),
+  hasUseState: navbarCode.includes('useState'),
+  tailwindClasses: {
+    found: true,
+    mobile: navbarCode.includes('lg:hidden') || navbarCode.includes('md:hidden'),
+    desktop: navbarCode.includes('hidden lg:') || navbarCode.includes('hidden md:'),
+  }
 };
 
 fs.writeFileSync(
@@ -56,6 +68,7 @@ fs.writeFileSync(
 );
 
 console.log('✅ Code Analyse abgeschlossen');
+console.log(JSON.stringify(analysis, null, 2));
 ```
 
 ### 3. MobileNav.tsx erstellen
@@ -69,6 +82,7 @@ import type { Header } from '@/payload-types'
 import { Button } from '@/components/ui/button'
 import { Media } from '@/components/Media'
 import { CMSLink } from '@/components/CMSLink'
+import { Menu, X } from 'lucide-react'
 
 interface MobileNavProps {
   header: Header
@@ -77,15 +91,9 @@ interface MobileNavProps {
 export const MobileNav: React.FC<MobileNavProps> = ({ header }) => {
   const [isOpen, setIsOpen] = useState(false)
   
-  // WICHTIG: Original Relume Code hier einfügen
-  // NUR Datenquelle ändern - KEINE Styles ändern!
-  // Tailwind Classes EXAKT beibehalten
-  
   return (
     <div className="lg:hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-[5%] py-4">
-        {/* Logo */}
         {header.logo && (
           <Media 
             resource={header.logo} 
@@ -93,33 +101,31 @@ export const MobileNav: React.FC<MobileNavProps> = ({ header }) => {
           />
         )}
         
-        {/* Mobile Menu Toggle */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Menu"
         >
-          {/* Icon */}
+          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
       </div>
       
-      {/* Mobile Menu */}
       {isOpen && (
-        <div className="px-[5%] py-4">
+        <div className="px-[5%] pb-4">
           <nav className="flex flex-col space-y-4">
             {header.navigation?.map((item, index) => (
               <CMSLink
                 key={index}
                 {...item.link}
                 className="text-md"
+                onClick={() => setIsOpen(false)}
               >
                 {item.label}
               </CMSLink>
             ))}
           </nav>
           
-          {/* CTA Button - NUR ShadCN Variant! */}
           {header.ctaButton && (
             <div className="mt-6">
               <Button
@@ -160,7 +166,6 @@ export const DesktopNav: React.FC<DesktopNavProps> = ({ header }) => {
   return (
     <div className="hidden lg:block">
       <div className="flex items-center justify-between px-[5%] py-4">
-        {/* Logo */}
         {header.logo && (
           <Media 
             resource={header.logo} 
@@ -168,7 +173,6 @@ export const DesktopNav: React.FC<DesktopNavProps> = ({ header }) => {
           />
         )}
         
-        {/* Navigation */}
         <nav className="flex items-center gap-6">
           {header.navigation?.map((item, index) => (
             <CMSLink
@@ -181,7 +185,6 @@ export const DesktopNav: React.FC<DesktopNavProps> = ({ header }) => {
           ))}
         </nav>
         
-        {/* CTA Button - NUR ShadCN Variant! */}
         {header.ctaButton && (
           <Button
             variant={header.ctaButton.variant || 'default'}
@@ -198,7 +201,7 @@ export const DesktopNav: React.FC<DesktopNavProps> = ({ header }) => {
 }
 ```
 
-### 5. PayloadCMS Config mit ShadCN Variants
+### 5. PayloadCMS Config
 
 ```typescript
 // filepath: src/Header/config.ts
@@ -263,26 +266,6 @@ export const Header: GlobalConfig = {
               admin: {
                 condition: (data, siblingData) => siblingData?.type === 'url',
               },
-            },
-          ],
-        },
-        {
-          name: 'submenu',
-          type: 'array',
-          label: 'Untermenü',
-          admin: {
-            description: 'Optional: Dropdown-Menü für diesen Navigationspunkt',
-          },
-          fields: [
-            {
-              name: 'label',
-              type: 'text',
-              label: 'Beschriftung',
-            },
-            {
-              name: 'link',
-              type: 'text',
-              label: 'Link',
             },
           ],
         },
@@ -353,7 +336,11 @@ export const Header: GlobalConfig = {
 }
 ```
 
-### 6. Hook erstellen (falls nicht vorhanden)
+### 6. Hook erstellen
+
+```bash
+mkdir -p src/Header/hooks
+```
 
 ```typescript
 // filepath: src/Header/hooks/revalidateHeader.ts
@@ -399,12 +386,18 @@ export const Header: React.FC<HeaderProps> = ({ header }) => {
 ### 8. Migration erstellen
 
 ```bash
+echo "📝 Erstelle Migration für Header..."
 npm run payload migrate:create -- --name add-header-global
 
-echo "Migration erstellt, führe aus..."
+echo "🔄 Führe Migration aus..."
 npm run payload migrate
 
-echo "✅ Migration erfolgreich ausgeführt"
+if [ $? -eq 0 ]; then
+  echo "✅ Migration erfolgreich ausgeführt"
+else
+  echo "❌ Migration fehlgeschlagen"
+  exit 1
+fi
 ```
 
 ### 9. In payload.config.ts registrieren
@@ -426,34 +419,43 @@ export default buildConfig({
 ### 10. Git Commit
 
 ```bash
+NAVBAR_NAME=$(cat .temp/build-config.json | jq -r '.components.navbar.name')
+
 git add src/Header/
 git add src/payload.config.ts
 git add src/migrations/
 
-git commit -m "feat(header): add ${navbarConfig.name} navbar
+git commit -m "feat(header): add ${NAVBAR_NAME} navbar
 
-Source: relume/Header/${navbarConfig.name}.tsx
+Source: ${NAVBAR_NAME}.tsx from cloned Relume repo
 Components:
-- MobileNav.tsx
-- DesktopNav.tsx
-- config.ts with German UX
-- revalidateHeader hook
+- MobileNav.tsx (responsive mobile menu)
+- DesktopNav.tsx (desktop navigation)
+- config.ts with German UX labels
+- revalidateHeader hook for cache invalidation
+- index.tsx export
 
+Features:
 ✅ Original Relume design preserved
 ✅ All Tailwind classes maintained
-✅ ShadCN Button variants used
-✅ Migration executed
-✅ Registered in payload.config.ts"
+✅ ShadCN Button variants (default, outline, ghost, link)
+✅ Lucide icons for menu toggle
+✅ Responsive breakpoints (lg:hidden/hidden lg:)
+✅ German PayloadCMS labels
+✅ Migration executed successfully
+✅ Registered in payload.config.ts
+
+No custom styles - pure ShadCN components!"
 
 echo "✅ Git Commit erstellt"
 ```
 
 ## Erfolgskriterien
 
-- [ ] Navbar Code erfolgreich von GitHub geladen
-- [ ] Code Analyse durchgeführt
-- [ ] MobileNav.tsx mit originalem Relume Design
-- [ ] DesktopNav.tsx mit originalem Relume Design
+- [ ] Navbar Code erfolgreich aus `.temp/relume-repo/` geladen
+- [ ] Code Analyse durchgeführt und gespeichert
+- [ ] MobileNav.tsx erstellt mit Relume Design
+- [ ] DesktopNav.tsx erstellt mit Relume Design
 - [ ] config.ts mit deutschen Labels und ShadCN variants
 - [ ] Nur ShadCN Button Variants verwendet (keine Custom-Styles!)
 - [ ] revalidateHeader Hook vorhanden

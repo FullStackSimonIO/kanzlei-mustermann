@@ -1,51 +1,64 @@
 ---
-description: Alle Hero Komponenten aus Relume GitHub laden und konvertieren
+description: Alle Hero Komponenten aus geklontem Relume Repo laden und konvertieren
 ---
 
 # Schritt 3: Heroes erstellen
 
 ## Input
-- Props: `heroes` (z.B. ["Header1", "Header2", "HeroHeader5"])
 - Build Config: `.temp/build-config.json`
 
 ## WICHTIG: Naming Convention
 
 **Relume Repo:** Alle Hero-Komponenten heißen `HeroHeader{N}` im Ordner `Header/`
 **Input Props:** Können sein:
-- `Header1` → wird zu `HeroHeader1`
+- `Header1` → wurde zu `HeroHeader1` normalisiert
 - `HeroHeader5` → bleibt `HeroHeader5`
 
 ## Aufgaben
 
-### 1. Alle Hero Komponenten von GitHub laden
+### 1. Alle Hero Komponenten aus geklontem Repo laden
+
+```bash
+echo "📥 Lade Hero Komponenten..."
+
+BUILD_CONFIG=$(cat .temp/build-config.json)
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+
+mkdir -p .temp/relume-components/heroes
+
+echo "Lade $HERO_COUNT Heroes..."
+
+for i in $(seq 0 $(($HERO_COUNT - 1))); do
+  HERO_NAME=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].name")
+  HERO_PATH=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].localPath")
+  
+  if [ ! -f "$HERO_PATH" ]; then
+    echo "❌ Hero nicht gefunden: $HERO_NAME ($HERO_PATH)"
+    exit 1
+  fi
+  
+  cp "$HERO_PATH" ".temp/relume-components/heroes/${HERO_NAME}.tsx"
+  echo "✅ Geladen: $HERO_NAME"
+done
+
+echo "✅ Alle $HERO_COUNT Heroes geladen"
+```
+
+### 2. Alle Heroes analysieren
 
 ```typescript
-// Lade Build Config
-const config = JSON.parse(fs.readFileSync('.temp/build-config.json'));
-const heroesConfig = config.components.heroes;
-
-console.log(`📥 Lade ${heroesConfig.length} Heroes von GitHub...`);
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+);
 
 const heroAnalysis = [];
 
-for (const hero of heroesConfig) {
-  console.log(`   Loading: ${hero.name} (${hero.path})`);
-  
-  // GitHub MCP Call
-  const heroCode = await mcp.tools.github.read_file({
-    owner: config.relume.owner,
-    repo: config.relume.repo,
-    path: hero.path,
-    branch: config.relume.branch
-  });
-  
-  // Speichern für Analyse
-  fs.writeFileSync(
+for (const hero of buildConfig.components.heroes) {
+  const heroCode = fs.readFileSync(
     `.temp/relume-components/heroes/${hero.name}.tsx`,
-    heroCode
+    'utf-8'
   );
   
-  // Analysiere Komponente
   const analysis = {
     name: hero.name,
     originalName: hero.originalName,
@@ -55,26 +68,32 @@ for (const hero of heroesConfig) {
     hasStats: heroCode.includes('stat') || heroCode.includes('number'),
     buttonCount: (heroCode.match(/button|Button/gi) || []).length,
     hasTestimonial: heroCode.includes('testimonial') || heroCode.includes('quote'),
+    hasForm: heroCode.includes('form') || heroCode.includes('input'),
   };
   
   heroAnalysis.push(analysis);
-  console.log(`   ✅ ${hero.name} geladen und analysiert`);
+  console.log(`✅ Analysiert: ${hero.name}`);
 }
 
-// Speichere Gesamt-Analyse
 fs.writeFileSync(
   '.temp/analysis/heroes-analysis.json',
   JSON.stringify(heroAnalysis, null, 2)
 );
 
-console.log('✅ Alle Heroes geladen und analysiert');
+console.log(`✅ Alle ${heroAnalysis.length} Heroes analysiert`);
+console.log(JSON.stringify(heroAnalysis, null, 2));
 ```
 
-### 2. Shared Hero Block Config erstellen
+### 3. Shared Hero Block Config erstellen
 
 ```typescript
 // filepath: src/heroes/config.ts
 import type { Block } from 'payload'
+
+// Lade Hero Analysis für conditional fields
+const heroAnalysis = JSON.parse(
+  fs.readFileSync('.temp/analysis/heroes-analysis.json', 'utf-8')
+);
 
 export const HeroBlock: Block = {
   slug: 'hero',
@@ -91,13 +110,10 @@ export const HeroBlock: Block = {
       admin: {
         description: 'Wähle den Stil der Hero-Sektion',
       },
-      options: [
-        // Dynamisch generiert aus heroAnalysis
-        ...heroAnalysis.map(hero => ({
-          label: hero.name.replace(/([A-Z])/g, ' $1').trim(),
-          value: hero.name.charAt(0).toLowerCase() + hero.name.slice(1),
-        }))
-      ],
+      options: heroAnalysis.map(hero => ({
+        label: hero.name.replace(/([A-Z])/g, ' $1').trim(),
+        value: hero.name.charAt(0).toLowerCase() + hero.name.slice(1),
+      })),
     },
     {
       name: 'heading',
@@ -124,7 +140,6 @@ export const HeroBlock: Block = {
       admin: {
         description: 'Haupt-Bild der Hero-Sektion',
         condition: (data) => {
-          // Zeige nur für Heroes die ein Bild haben
           const heroesWithImage = heroAnalysis
             .filter(h => h.hasImage)
             .map(h => h.name.charAt(0).toLowerCase() + h.name.slice(1));
@@ -311,9 +326,29 @@ export const HeroBlock: Block = {
 }
 ```
 
-### 3. Einzelne Hero Komponenten erstellen
+### 4. Einzelne Hero Komponenten erstellen
 
-Für jede Hero in `heroesConfig`:
+```bash
+echo "📝 Erstelle Hero Komponenten..."
+
+BUILD_CONFIG=$(cat .temp/build-config.json)
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+
+mkdir -p src/heroes
+
+for i in $(seq 0 $(($HERO_COUNT - 1))); do
+  HERO_NAME=$(echo $BUILD_CONFIG | jq -r ".components.heroes[$i].name")
+  HERO_DIR="src/heroes/${HERO_NAME}"
+  
+  mkdir -p "$HERO_DIR"
+  
+  echo "Creating $HERO_DIR/index.tsx..."
+done
+
+echo "✅ Hero Komponenten Ordner erstellt"
+```
+
+Für jede Hero:
 
 ```typescript
 // filepath: src/heroes/{HeroName}/index.tsx
@@ -331,9 +366,9 @@ interface {HeroName}Props {
 }
 
 export const {HeroName}: React.FC<{HeroName}Props> = ({ data }) => {
-  // WICHTIG: Original Relume Code hier einfügen
-  // NUR Datenquelle ändern - KEINE Styles ändern!
-  // Tailwind Classes EXAKT beibehalten
+  // WICHTIG: Original Relume Code aus .temp/relume-components/heroes/{HeroName}.tsx
+  // hier einfügen und NUR Datenquelle ändern!
+  // Alle Tailwind Classes beibehalten
   // Buttons NUR mit ShadCN Variants
   
   return (
@@ -445,29 +480,40 @@ export const {HeroName}: React.FC<{HeroName}Props> = ({ data }) => {
 }
 ```
 
-### 4. Hero Renderer erstellen
+### 5. Hero Renderer erstellen
 
 ```typescript
 // filepath: src/heroes/index.tsx
-// Import all heroes
-${heroesConfig.map(hero => `import { ${hero.name} } from './${hero.name}'`).join('\n')}
+'use client'
+
+import React from 'react'
+import type { HeroBlock as HeroBlockType } from '@/payload-types'
+
+// Import all heroes dynamisch aus build config
+const buildConfig = JSON.parse(
+  fs.readFileSync('.temp/build-config.json', 'utf-8')
+);
+
+${buildConfig.components.heroes.map(hero => 
+  `import { ${hero.name} } from './${hero.name}'`
+).join('\n')}
 
 export const HeroComponents = {
-  ${heroesConfig.map(hero => {
+  ${buildConfig.components.heroes.map(hero => {
     const camelCase = hero.name.charAt(0).toLowerCase() + hero.name.slice(1);
     return `${camelCase}: ${hero.name}`;
   }).join(',\n  ')}
 }
 
 interface HeroRendererProps {
-  data: any
+  data: HeroBlockType
 }
 
 export const HeroRenderer: React.FC<HeroRendererProps> = ({ data }) => {
   const Component = HeroComponents[data.heroType]
   
   if (!Component) {
-    console.warn(\`Hero type "\${data.heroType}" not found\`)
+    console.warn(`Hero type "${data.heroType}" not found`)
     return null
   }
   
@@ -475,22 +521,30 @@ export const HeroRenderer: React.FC<HeroRendererProps> = ({ data }) => {
 }
 ```
 
-### 5. Migration erstellen
+### 6. Migration erstellen
 
 ```bash
+echo "📝 Erstelle Migration für Hero Block..."
 npm run payload migrate:create -- --name add-hero-block
 
-echo "Migration erstellt, führe aus..."
+echo "🔄 Führe Migration aus..."
 npm run payload migrate
 
-echo "✅ Migration erfolgreich ausgeführt"
+if [ $? -eq 0 ]; then
+  echo "✅ Migration erfolgreich ausgeführt"
+else
+  echo "❌ Migration fehlgeschlagen"
+  exit 1
+fi
 ```
 
-### 6. In payload.config.ts registrieren
+### 7. In payload.config.ts registrieren
 
 ```typescript
 // filepath: src/payload.config.ts
 // ...existing code...
+import { Header } from './Header/config'
+import { Footer } from './Footer/config'
 import { HeroBlock } from './heroes/config'
 
 export default buildConfig({
@@ -511,41 +565,56 @@ export default buildConfig({
       ],
     },
   ],
+  globals: [
+    Header,
+    Footer,
+    // ...existing code...
+  ],
 })
 ```
 
-### 7. Git Commit
+### 8. Git Commit
 
 ```bash
+BUILD_CONFIG=$(cat .temp/build-config.json)
+HERO_LIST=$(echo $BUILD_CONFIG | jq -r '.components.heroes[].originalName' | tr '\n' ', ' | sed 's/,$//')
+HERO_COUNT=$(echo $BUILD_CONFIG | jq '.components.heroes | length')
+
 git add src/heroes/
 git add src/payload.config.ts
 git add src/migrations/
 
-HEROES_LIST=$(echo ${heroesConfig.map(h => h.originalName).join(', ')})
+git commit -m "feat(heroes): add ${HERO_COUNT} hero sections
 
-git commit -m "feat(heroes): add hero sections
-
-Source: relume/Header/HeroHeader*.tsx
-Heroes added: ${HEROES_LIST}
+Source: HeroHeader*.tsx from cloned Relume repo
+Heroes: ${HERO_LIST}
 
 Components:
-${heroesConfig.map(h => \`- ${h.name} (${h.path})\`).join('\n')}
+$(echo $BUILD_CONFIG | jq -r '.components.heroes[] | "- \(.name) (from \(.originalName))"')
 
-✅ Shared config with conditional fields
+Features:
+✅ Shared config.ts with smart conditional fields
+✅ Individual components in src/heroes/{HeroName}/
+✅ HeroRenderer for dynamic rendering
 ✅ Original Relume designs preserved
 ✅ All Tailwind classes maintained
-✅ ShadCN Button variants used
-✅ Migration executed
-✅ Registered in payload.config.ts"
+✅ ShadCN Button variants (default, outline, ghost, link)
+✅ Conditional fields based on hero type
+✅ German PayloadCMS labels
+✅ Migration executed successfully
+✅ Registered in payload.config.ts
+
+No custom styles - pure ShadCN components!"
 
 echo "✅ Git Commit erstellt"
 ```
 
 ## Erfolgskriterien
 
-- [ ] Alle Heroes erfolgreich von GitHub geladen
+- [ ] Alle Heroes erfolgreich aus Repo geladen
 - [ ] Namen korrekt normalisiert (Header1 → HeroHeader1)
-- [ ] Shared config.ts mit smart conditionals
+- [ ] Alle Heroes analysiert
+- [ ] Shared config.ts mit smart conditionals erstellt
 - [ ] Jede Hero hat eigene Komponente in /heroes/{HeroName}/
 - [ ] HeroRenderer funktioniert
 - [ ] Nur ShadCN Button Variants verwendet (keine Custom-Styles!)
