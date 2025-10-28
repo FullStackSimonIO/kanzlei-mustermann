@@ -1,5 +1,4 @@
 {
-  "buildCommand": "pnpm ci",
   "crons": [
     {
       "path": "/api/payload-jobs/run",
