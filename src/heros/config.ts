@@ -24,6 +24,10 @@ export const hero: Field = {
           label: 'None',
           value: 'none',
         },
+        {
+          label: 'Post Hero',
+          value: 'postHero',
+        },
       ],
       required: true,
     },

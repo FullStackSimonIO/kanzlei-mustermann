@@ -1,11 +1,12 @@
+import { Layout1Block } from '@/blocks/Layout/Layout1/Component'
 /* PLOP_IMPORTS */
 
 import React, { Fragment } from 'react'
 import type { Page } from '@/payload-types'
-import { ArchiveBlock } from '@/block-templates/ArchiveBlock/Component'
 
 const blockComponents = {
-  archive: ArchiveBlock,
+  layout1: Layout1Block,
+
   /* PLOP_EXPORTS */
 } // ! Block Komponenten hier importieren
 

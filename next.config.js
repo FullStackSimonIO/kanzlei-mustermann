@@ -22,6 +22,26 @@ const nextConfig = {
   },
   reactStrictMode: true,
   redirects,
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Exclude Node.js modules from client bundle
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+        worker_threads: false,
+        child_process: false,
+        net: false,
+        tls: false,
+        dns: false,
+      }
+    }
+    return config
+  },
 }
 
 export default withPayload(nextConfig)

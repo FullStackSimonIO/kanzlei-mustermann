@@ -146,7 +146,7 @@ export interface Page {
   id: number;
   title: string;
   hero: {
-    type: 'none' | 'header1';
+    type: 'none' | 'postHero';
     title: string;
     richText?: {
       root: {
@@ -194,7 +194,7 @@ export interface Page {
         }[]
       | null;
   };
-  layout: ArchiveBlock[];
+  layout: Layout1Block[];
   meta?: {
     title?: string | null;
     /**
@@ -390,10 +390,21 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ArchiveBlock".
+ * via the `definition` "Layout1Block".
  */
-export interface ArchiveBlock {
-  introContent?: {
+export interface Layout1Block {
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
     root: {
       type: string;
       children: {
@@ -407,20 +418,49 @@ export interface ArchiveBlock {
       version: number;
     };
     [k: string]: unknown;
-  } | null;
-  populateBy?: ('collection' | 'selection') | null;
-  relationTo?: 'posts' | null;
-  categories?: (number | Category)[] | null;
-  limit?: number | null;
-  selectedDocs?:
+  };
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden (z.B. "Mehr erfahren", "Kontakt")
+   */
+  links?:
     | {
-        relationTo: 'posts';
-        value: number | Post;
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
       }[]
     | null;
+  /**
+   * Das Bild, das auf der rechten Seite neben dem Text angezeigt wird. Empfohlen: Querformat, mindestens 800x600px
+   */
+  media: number | Media;
+  /**
+   * Wählen Sie, ob das Bild rechts oder links vom Text angezeigt werden soll
+   */
+  imagePosition?: ('right' | 'left') | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
   id?: string | null;
   blockName?: string | null;
-  blockType: 'archive';
+  blockType: 'layout1';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -705,7 +745,7 @@ export interface PagesSelect<T extends boolean = true> {
   layout?:
     | T
     | {
-        archive?: T | ArchiveBlockSelect<T>;
+        layout1?: T | Layout1BlockSelect<T>;
       };
   meta?:
     | T
@@ -723,15 +763,30 @@ export interface PagesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ArchiveBlock_select".
+ * via the `definition` "Layout1Block_select".
  */
-export interface ArchiveBlockSelect<T extends boolean = true> {
-  introContent?: T;
-  populateBy?: T;
-  relationTo?: T;
-  categories?: T;
-  limit?: T;
-  selectedDocs?: T;
+export interface Layout1BlockSelect<T extends boolean = true> {
+  heading?: T;
+  tagline?: T;
+  richText?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  media?: T;
+  imagePosition?: T;
+  spacing?: T;
   id?: T;
   blockName?: T;
 }

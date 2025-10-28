@@ -1,0 +1,468 @@
+```typescript filename="config.ts"
+import type { Block } from 'payload'
+import {
+  BoldFeature,
+  ItalicFeature,
+  LinkFeature,
+  ParagraphFeature,
+  lexicalEditor,
+  UnderlineFeature,
+  HeadingFeature,
+  BlockquoteFeature,
+  OrderedListFeature,
+  UnorderedListFeature,
+  ChecklistFeature,
+  IndentFeature,
+  AlignFeature,
+  HorizontalRuleFeature,
+  FixedToolbarFeature,
+  InlineToolbarFeature,
+  StrikethroughFeature,
+  SubscriptFeature,
+  SuperscriptFeature,
+  BlocksFeature,
+} from '@payloadcms/richtext-lexical'
+import {
+  BgColorFeature,
+  TextColorFeature,
+  HighlightColorFeature,
+  YoutubeFeature,
+  VimeoFeature,
+} from 'payloadcms-lexical-ext'
+import type { TextFieldSingleValidation } from 'payload'
+import type { LinkFields } from '@payloadcms/richtext-lexical'
+import { linkGroup } from '@/fields/linkGroup'
+
+export const Contact1: Block = {
+  slug: 'contact1',
+  interfaceName: 'Contact1Block',
+  labels: {
+    singular: 'Contact 1 - Kontaktformular',
+    plural: 'Contact 1 - Kontaktformular',
+  },
+  fields: [
+    // * Überschrift
+    {
+      name: 'heading',
+      type: 'text',
+      label: 'Überschrift',
+      admin: {
+        description: 'Die Hauptüberschrift über dem Kontaktformular',
+      },
+      required: true,
+    },
+    // * Unterüberschrift / Tagline
+    {
+      name: 'tagline',
+      type: 'text',
+      label: 'Unterüberschrift / Tagline',
+      admin: {
+        description: 'Optionale Unterüberschrift oder Tagline über der Hauptüberschrift',
+      },
+    },
+    // * Fließtext mit allen möglichen Optionen
+    {
+      name: 'richText',
+      type: 'richText',
+      label: 'Beschreibungstext',
+      admin: {
+        description:
+          'Beschreibungstext unter der Überschrift. Erklärt den Zweck des Kontaktformulars.',
+      },
+      editor: lexicalEditor({
+        features: ({ rootFeatures }) => {
+          return [
+            ...rootFeatures,
+            ParagraphFeature(),
+            HeadingFeature({
+              enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            }),
+            BoldFeature(),
+            ItalicFeature(),
+            UnderlineFeature(),
+            StrikethroughFeature(),
+            SubscriptFeature(),
+            SuperscriptFeature(),
+            OrderedListFeature(),
+            UnorderedListFeature(),
+            ChecklistFeature(),
+            BlockquoteFeature(),
+            IndentFeature(),
+            AlignFeature(),
+            HorizontalRuleFeature(),
+            TextColorFeature(),
+            HighlightColorFeature(),
+            BlocksFeature({}),
+            BgColorFeature(),
+            LinkFeature({
+              enabledCollections: ['pages', 'posts'],
+              fields: ({ defaultFields }) => {
+                const defaultFieldsWithoutUrl = defaultFields.filter((field) => {
+                  if ('name' in field && field.name === 'url') return false
+                  return true
+                })
+
+                return [
+                  ...defaultFieldsWithoutUrl,
+                  {
+                    name: 'url',
+                    type: 'text',
+                    admin: {
+                      condition: (_data, siblingData) => siblingData?.linkType !== 'internal',
+                    },
+                    label: ({ t }) => t('fields:enterURL'),
+                    required: true,
+                    validate: ((value, options) => {
+                      if ((options?.siblingData as LinkFields)?.linkType === 'internal') {
+                        return true
+                      }
+                      return value ? true : 'URL is required'
+                    }) as TextFieldSingleValidation,
+                  },
+                ]
+              },
+            }),
+            YoutubeFeature(),
+            VimeoFeature(),
+            FixedToolbarFeature(),
+            InlineToolbarFeature(),
+          ]
+        },
+      }),
+      required: true,
+    },
+    // * Submit Button Text
+    {
+      name: 'submitButtonText',
+      type: 'text',
+      label: 'Button Text',
+      defaultValue: 'Nachricht senden',
+      admin: {
+        description: 'Der Text auf dem Submit-Button',
+      },
+      required: true,
+    },
+    // * Formular Einstellungen
+    {
+      name: 'formSettings',
+      type: 'group',
+      label: 'Formular Einstellungen',
+      fields: [
+        {
+          name: 'nameFieldLabel',
+          type: 'text',
+          label: 'Name Feld Label',
+          defaultValue: 'Name',
+        },
+        {
+          name: 'emailFieldLabel',
+          type: 'text',
+          label: 'E-Mail Feld Label',
+          defaultValue: 'E-Mail',
+        },
+        {
+          name: 'messageFieldLabel',
+          type: 'text',
+          label: 'Nachricht Feld Label',
+          defaultValue: 'Nachricht',
+        },
+        {
+          name: 'messagePlaceholder',
+          type: 'text',
+          label: 'Nachricht Placeholder',
+          defaultValue: 'Ihre Nachricht...',
+        },
+        {
+          name: 'termsText',
+          type: 'text',
+          label: 'AGB Checkbox Text',
+          defaultValue: 'Ich akzeptiere die Nutzungsbedingungen',
+        },
+        {
+          name: 'termsLink',
+          type: 'text',
+          label: 'AGB Link',
+          defaultValue: '/terms',
+          admin: {
+            description: 'Link zu den Nutzungsbedingungen',
+          },
+        },
+      ],
+    },
+    // * Abstand oben/unten
+    {
+      name: 'spacing',
+      type: 'select',
+      label: 'Abstände',
+      defaultValue: 'medium',
+      admin: {
+        description: 'Wählen Sie den Abstand über und unter diesem Abschnitt',
+      },
+      options: [
+        {
+          label: 'Klein',
+          value: 'small',
+        },
+        {
+          label: 'Mittel (Standard)',
+          value: 'medium',
+        },
+        {
+          label: 'Groß',
+          value: 'large',
+        },
+        {
+          label: 'Kein Abstand',
+          value: 'none',
+        },
+      ],
+    },
+  ],
+}
+```
+
+```tsx filename="Component.tsx"
+import React from 'react'
+import type { Page } from '@/payload-types'
+import { cn } from '@/utilities/ui'
+import RichText from '@/components/RichText'
+import { ContactForm } from './ContactForm'
+
+type Contact1BlockType = Extract<Page['layout'][0], { blockType: 'contact1' }>
+
+type Props = Contact1BlockType & {
+  id?: string
+}
+
+export const Contact1Block: React.FC<Props> = ({
+  heading,
+  tagline,
+  richText,
+  submitButtonText,
+  formSettings,
+  spacing = 'medium',
+}) => {
+  const spacingClasses = {
+    none: 'py-0',
+    small: 'py-8 md:py-12',
+    medium: 'py-12 md:py-16 lg:py-20',
+    large: 'py-16 md:py-24 lg:py-32',
+  }
+
+  return (
+    <section
+      className={cn(
+        'w-full',
+        spacingClasses[spacing as keyof typeof spacingClasses] || spacingClasses.medium,
+      )}
+    >
+      <div className="container mx-auto px-4">
+        <div className="mx-auto max-w-lg">
+          {/* Header */}
+          <div className="mb-8 text-center md:mb-10 lg:mb-12">
+            {tagline && (
+              <p className="mb-3 font-semibold text-primary uppercase tracking-wide md:mb-4">
+                {tagline}
+              </p>
+            )}
+
+            {heading && (
+              <h2 className="mb-5 text-3xl font-bold md:mb-6 md:text-5xl lg:text-6xl text-gray-900">
+                {heading}
+              </h2>
+            )}
+
+            {richText && (
+              <div className="text-gray-600">
+                <RichText
+                  data={richText}
+                  enableGutter={false}
+                  enableProse={true}
+                  className="leading-relaxed"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Contact Form */}
+          <ContactForm
+            submitButtonText={submitButtonText || 'Nachricht senden'}
+            formSettings={formSettings}
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+```
+
+```tsx filename="ContactForm.tsx"
+'use client'
+
+import React, { useState } from 'react'
+import { cn } from '@/utilities/ui'
+
+type FormSettings = {
+  nameFieldLabel?: string
+  emailFieldLabel?: string
+  messageFieldLabel?: string
+  messagePlaceholder?: string
+  termsText?: string
+  termsLink?: string
+}
+
+type ContactFormProps = {
+  submitButtonText: string
+  formSettings?: FormSettings
+}
+
+export const ContactForm: React.FC<ContactFormProps> = ({
+  submitButtonText,
+  formSettings = {},
+}) => {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
+
+  const {
+    nameFieldLabel = 'Name',
+    emailFieldLabel = 'E-Mail',
+    messageFieldLabel = 'Nachricht',
+    messagePlaceholder = 'Ihre Nachricht...',
+    termsText = 'Ich akzeptiere die Nutzungsbedingungen',
+    termsLink = '/terms',
+  } = formSettings
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
+
+    try {
+      // Hier würde die API-Integration stattfinden
+      console.log({ name, email, message, acceptTerms })
+      
+      // Simuliere API-Call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      
+      setSubmitStatus('success')
+      setName('')
+      setEmail('')
+      setMessage('')
+      setAcceptTerms(false)
+    } catch (error) {
+      console.error('Form submission error:', error)
+      setSubmitStatus('error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-6 w-full max-w-md mx-auto">
+      {/* Name Field */}
+      <div className="grid w-full items-center">
+        <label htmlFor="name" className="mb-2 text-sm font-medium text-gray-700">
+          {nameFieldLabel}
+        </label>
+        <input
+          type="text"
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+        />
+      </div>
+
+      {/* Email Field */}
+      <div className="grid w-full items-center">
+        <label htmlFor="email" className="mb-2 text-sm font-medium text-gray-700">
+          {emailFieldLabel}
+        </label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+        />
+      </div>
+
+      {/* Message Field */}
+      <div className="grid w-full items-center">
+        <label htmlFor="message" className="mb-2 text-sm font-medium text-gray-700">
+          {messageFieldLabel}
+        </label>
+        <textarea
+          id="message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder={messagePlaceholder}
+          required
+          rows={5}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+        />
+      </div>
+
+      {/* Terms Checkbox */}
+      <div className="flex items-start space-x-2 text-sm">
+        <input
+          type="checkbox"
+          id="terms"
+          checked={acceptTerms}
+          onChange={(e) => setAcceptTerms(e.target.checked)}
+          required
+          className="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary"
+        />
+        <label htmlFor="terms" className="text-gray-600 cursor-pointer">
+          {termsText.split('Nutzungsbedingungen')[0]}
+          <a
+            href={termsLink}
+            className="text-primary underline hover:text-primary/80"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Nutzungsbedingungen
+          </a>
+        </label>
+      </div>
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        disabled={isSubmitting || !acceptTerms}
+        className={cn(
+          'w-full py-3 px-6 rounded-md font-semibold transition-colors duration-200',
+          'bg-primary text-white hover:bg-primary/90',
+          'disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-500',
+          'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+        )}
+      >
+        {isSubmitting ? 'Wird gesendet...' : submitButtonText}
+      </button>
+
+      {/* Status Messages */}
+      {submitStatus === 'success' && (
+        <div className="p-4 rounded-md bg-green-50 border border-green-200">
+          <p className="text-sm text-green-800 font-medium">
+            ✓ Ihre Nachricht wurde erfolgreich gesendet!
+          </p>
+        </div>
+      )}
+
+      {submitStatus === 'error' && (
+        <div className="p-4 rounded-md bg-red-50 border border-red-200">
+          <p className="text-sm text-red-800 font-medium">
+            ✗ Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.
+          </p>
+        </div>
+      )}
+    </form>
+  )
+}
+```

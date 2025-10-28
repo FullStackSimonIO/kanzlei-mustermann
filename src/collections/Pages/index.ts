@@ -7,7 +7,7 @@ import { populatePublishedAt } from '../../hooks/populatePublishedAt'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { revalidateDelete, revalidatePage } from './hooks/revalidatePage'
 
-//import { Contact1 } from '@/blocks/contact/Contact1/config'
+import { Layout1 } from '@/blocks/Layout/Layout1/config'
 /* PLOP_IMPORT_BLOCK_CONFIG */
 
 import {
@@ -77,6 +77,8 @@ export const Pages: CollectionConfig<'pages'> = {
               name: 'layout',
               type: 'blocks',
               blocks: [
+                Layout1,
+
                 /* PLOP_BLOCKS */
               ], // ! HIER DIE CONFIG DES BLOCKS IMPORTIEREN
               required: true,

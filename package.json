@@ -18,7 +18,8 @@
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "reinstall": "cross-env NODE_OPTIONS=--no-deprecation rm -rf node_modules && rm pnpm-lock.yaml && pnpm --ignore-workspace install",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
-    "plop": "plop --plopfile=plopfile.mjs"
+    "plop": "plop --plopfile=plopfile.mjs",
+    "generate-blocks": "node scripts/generate-blocks.mjs"
   },
   "dependencies": {
     "@ai-stack/payloadcms": "3.2.5-beta",
