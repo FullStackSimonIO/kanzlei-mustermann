@@ -4,7 +4,7 @@ import redirects from './redirects.js'
 
 const NEXT_PUBLIC_SERVER_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : undefined || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  : process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -18,6 +18,15 @@ const nextConfig = {
           protocol: url.protocol.replace(':', ''),
         }
       }),
+      // Vercel Blob Storage
+      {
+        protocol: 'https',
+        hostname: '**.public.blob.vercel-storage.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'public.blob.vercel-storage.com',
+      },
     ],
   },
   reactStrictMode: true,
@@ -27,6 +36,7 @@ const nextConfig = {
       // Exclude Node.js modules from client bundle
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        assert: false,
         fs: false,
         path: false,
         os: false,
