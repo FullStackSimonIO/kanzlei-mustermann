@@ -1,5 +1,7 @@
 import { Layout1Block } from '@/blocks/Layout/Layout1/Component'
 import { Layout16Block } from '@/blocks/Layout/Layout16/Component'
+import { Layout239Block } from '@/blocks/Layout/Layout239/Component'
+import { Layout506Component } from '@/blocks/Layout/Layout506/Component'
 import { Layout416Block } from '@/blocks/Layout/Layout416/Component'
 import { Layout91Block } from '@/blocks/Layout/Layout91/Component'
 import { Layout520Block } from '@/blocks/Layout/Layout520/Component'
@@ -16,9 +18,11 @@ import type { Page } from '@/payload-types'
 const blockComponents = {
   layout1: Layout1Block,
   layout16: Layout16Block,
+  layout239: Layout239Block,
   layout416: Layout416Block,
   layout91: Layout91Block,
   layout520: Layout520Block,
+  layout506: Layout506Component,
   cta1: Cta1Block,
   cta39: CTA39Block,
   faq2: FAQ2Block,
@@ -47,7 +51,6 @@ export const RenderBlocks: React.FC<{
             if (Block) {
               return (
                 <div className="my-16" key={index}>
-                  {/* @ts-expect-error there may be some mismatch between the expected types here */}
                   <Block {...block} disableInnerContainer />
                 </div>
               )

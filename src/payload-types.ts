@@ -72,6 +72,8 @@ export interface Config {
     media: Media;
     categories: Category;
     users: User;
+    services: Service;
+    'service-categories': ServiceCategory;
     redirects: Redirect;
     search: Search;
     'payload-jobs': PayloadJob;
@@ -87,6 +89,8 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    services: ServicesSelect<false> | ServicesSelect<true>;
+    'service-categories': ServiceCategoriesSelect<false> | ServiceCategoriesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
@@ -228,6 +232,7 @@ export interface Page {
   layout: (
     | Layout1Block
     | Layout16Block
+    | Layout239Block
     | Layout416Block
     | Layout91Block
     | Layout520Block
@@ -236,6 +241,65 @@ export interface Page {
     | Faq2Block
     | Gallery18Block
     | Team12Block
+    | {
+        tagline?: string | null;
+        heading: string;
+        description?: string | null;
+        /**
+         * Default tab to display on page load (e.g., "tab-1")
+         */
+        defaultTabValue?: string | null;
+        tabs?:
+          | {
+              /**
+               * Unique identifier for this tab (e.g., "tab-1")
+               */
+              value: string;
+              /**
+               * Label that appears in the tab list
+               */
+              trigger: string;
+              icon: number | Media;
+              /**
+               * Heading displayed in the tab content area
+               */
+              contentHeading: string;
+              /**
+               * Description text in the tab content area
+               */
+              contentDescription?: string | null;
+              buttons?:
+                | {
+                    label: string;
+                    link: {
+                      type?: ('reference' | 'custom') | null;
+                      newTab?: boolean | null;
+                      reference?:
+                        | ({
+                            relationTo: 'pages';
+                            value: number | Page;
+                          } | null)
+                        | ({
+                            relationTo: 'posts';
+                            value: number | Post;
+                          } | null);
+                      url?: string | null;
+                      label: string;
+                      /**
+                       * Choose how the link should be rendered.
+                       */
+                      appearance?: ('default' | 'outline') | null;
+                    };
+                    id?: string | null;
+                  }[]
+                | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'layout506';
+      }
   )[];
   meta?: {
     title?: string | null;
@@ -589,6 +653,92 @@ export interface Layout16Block {
   id?: string | null;
   blockName?: string | null;
   blockType: 'layout16';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout239Block".
+ */
+export interface Layout239Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie Sections mit Bild, Überschrift und Beschreibung hinzu
+   */
+  sections?:
+    | {
+        /**
+         * Bild für die Section. Empfohlen: Querformat, mindestens 600x400px
+         */
+        image: number | Media;
+        /**
+         * Überschrift für die Section
+         */
+        sectionHeading: string;
+        /**
+         * Beschreibung der Section
+         */
+        description: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter den Sections angezeigt werden
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout239';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1259,6 +1409,318 @@ export interface Message {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services".
+ */
+export interface Service {
+  id: number;
+  title: string;
+  category?: (number | null) | ServiceCategory;
+  hero: {
+    type: 'none' | 'postHero' | 'heroheader1' | 'heroheader9' | 'heroheader62' | 'heroheader102';
+    /**
+     * Die Hauptüberschrift des Hero-Bereichs
+     */
+    title: string;
+    /**
+     * Beschreibungstext unter der Überschrift
+     */
+    richText?: {
+      root: {
+        type: string;
+        children: {
+          type: string;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    } | null;
+    links?:
+      | {
+          link: {
+            type?: ('reference' | 'custom') | null;
+            newTab?: boolean | null;
+            reference?:
+              | ({
+                  relationTo: 'pages';
+                  value: number | Page;
+                } | null)
+              | ({
+                  relationTo: 'posts';
+                  value: number | Post;
+                } | null);
+            url?: string | null;
+            label: string;
+            /**
+             * Choose how the link should be rendered.
+             */
+            appearance?: ('default' | 'outline') | null;
+          };
+          id?: string | null;
+        }[]
+      | null;
+    media?:
+      | {
+          image: number | Media;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Das Hauptbild für den Hero-Bereich
+     */
+    image?: (number | null) | Media;
+    /**
+     * Kurze Unterüberschrift über der Hauptüberschrift
+     */
+    tagline?: string | null;
+    /**
+     * Bilder für das Carousel
+     */
+    carouselImages?:
+      | {
+          image: number | Media;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Überschrift für jeden Carousel-Slide
+     */
+    carouselTitle?: string | null;
+    /**
+     * Beschreibung für jeden Carousel-Slide
+     */
+    carouselDescription?: string | null;
+  };
+  layout?:
+    | (
+        | Layout1Block
+        | Layout19Block
+        | {
+            tagline?: string | null;
+            heading: string;
+            description?: string | null;
+            features?:
+              | {
+                  icon: number | Media;
+                  paragraph: string;
+                  id?: string | null;
+                }[]
+              | null;
+            buttons?:
+              | {
+                  label: string;
+                  link: {
+                    type?: ('reference' | 'custom') | null;
+                    newTab?: boolean | null;
+                    reference?:
+                      | ({
+                          relationTo: 'pages';
+                          value: number | Page;
+                        } | null)
+                      | ({
+                          relationTo: 'posts';
+                          value: number | Post;
+                        } | null);
+                    url?: string | null;
+                    label: string;
+                    /**
+                     * Choose how the link should be rendered.
+                     */
+                    appearance?: ('default' | 'outline') | null;
+                  };
+                  id?: string | null;
+                }[]
+              | null;
+            image: number | Media;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'layout207';
+          }
+        | {
+            tagline?: string | null;
+            heading: string;
+            buttons?:
+              | {
+                  label: string;
+                  link: {
+                    type?: ('reference' | 'custom') | null;
+                    newTab?: boolean | null;
+                    reference?:
+                      | ({
+                          relationTo: 'pages';
+                          value: number | Page;
+                        } | null)
+                      | ({
+                          relationTo: 'posts';
+                          value: number | Post;
+                        } | null);
+                    url?: string | null;
+                    label: string;
+                    /**
+                     * Choose how the link should be rendered.
+                     */
+                    appearance?: ('default' | 'outline') | null;
+                  };
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'layout484';
+          }
+        | {
+            heading: string;
+            description?: string | null;
+            buttons?:
+              | {
+                  label: string;
+                  link: {
+                    type?: ('reference' | 'custom') | null;
+                    newTab?: boolean | null;
+                    reference?:
+                      | ({
+                          relationTo: 'pages';
+                          value: number | Page;
+                        } | null)
+                      | ({
+                          relationTo: 'posts';
+                          value: number | Post;
+                        } | null);
+                    url?: string | null;
+                    label: string;
+                    /**
+                     * Choose how the link should be rendered.
+                     */
+                    appearance?: ('default' | 'outline') | null;
+                  };
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'cta25';
+          }
+      )[]
+    | null;
+  meta?: {
+    title?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (number | null) | Media;
+    description?: string | null;
+  };
+  publishedAt?: string | null;
+  slug?: string | null;
+  slugLock?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-categories".
+ */
+export interface ServiceCategory {
+  id: number;
+  title: string;
+  /**
+   * Optionale Beschreibung der Kategorie
+   */
+  description?: string | null;
+  slug?: string | null;
+  slugLock?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout19Block".
+ */
+export interface Layout19Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie Merkmale/Features als Listenpunkte hinzu
+   */
+  features?:
+    | {
+        /**
+         * Text für den Listenpunkt
+         */
+        paragraph: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden (z.B. "Mehr erfahren", "Kontakt")
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Das Bild, das auf der rechten Seite neben dem Text angezeigt wird. Empfohlen: Querformat, mindestens 800x600px
+   */
+  media: number | Media;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout19';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -1437,6 +1899,14 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
+        relationTo: 'services';
+        value: number | Service;
+      } | null)
+    | ({
+        relationTo: 'service-categories';
+        value: number | ServiceCategory;
+      } | null)
+    | ({
         relationTo: 'redirects';
         value: number | Redirect;
       } | null)
@@ -1539,6 +2009,7 @@ export interface PagesSelect<T extends boolean = true> {
     | {
         layout1?: T | Layout1BlockSelect<T>;
         layout16?: T | Layout16BlockSelect<T>;
+        layout239?: T | Layout239BlockSelect<T>;
         layout416?: T | Layout416BlockSelect<T>;
         layout91?: T | Layout91BlockSelect<T>;
         layout520?: T | Layout520BlockSelect<T>;
@@ -1547,6 +2018,42 @@ export interface PagesSelect<T extends boolean = true> {
         faq2?: T | Faq2BlockSelect<T>;
         gallery18?: T | Gallery18BlockSelect<T>;
         team12?: T | Team12BlockSelect<T>;
+        layout506?:
+          | T
+          | {
+              tagline?: T;
+              heading?: T;
+              description?: T;
+              defaultTabValue?: T;
+              tabs?:
+                | T
+                | {
+                    value?: T;
+                    trigger?: T;
+                    icon?: T;
+                    contentHeading?: T;
+                    contentDescription?: T;
+                    buttons?:
+                      | T
+                      | {
+                          label?: T;
+                          link?:
+                            | T
+                            | {
+                                type?: T;
+                                newTab?: T;
+                                reference?: T;
+                                url?: T;
+                                label?: T;
+                                appearance?: T;
+                              };
+                          id?: T;
+                        };
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
       };
   meta?:
     | T
@@ -1622,6 +2129,41 @@ export interface Layout16BlockSelect<T extends boolean = true> {
         id?: T;
       };
   media?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout239Block_select".
+ */
+export interface Layout239BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  sections?:
+    | T
+    | {
+        image?: T;
+        sectionHeading?: T;
+        description?: T;
+        id?: T;
+      };
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
   spacing?: T;
   id?: T;
   blockName?: T;
@@ -2050,6 +2592,198 @@ export interface UsersSelect<T extends boolean = true> {
   hash?: T;
   loginAttempts?: T;
   lockUntil?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services_select".
+ */
+export interface ServicesSelect<T extends boolean = true> {
+  title?: T;
+  category?: T;
+  hero?:
+    | T
+    | {
+        type?: T;
+        title?: T;
+        richText?: T;
+        links?:
+          | T
+          | {
+              link?:
+                | T
+                | {
+                    type?: T;
+                    newTab?: T;
+                    reference?: T;
+                    url?: T;
+                    label?: T;
+                    appearance?: T;
+                  };
+              id?: T;
+            };
+        media?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+        image?: T;
+        tagline?: T;
+        carouselImages?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+        carouselTitle?: T;
+        carouselDescription?: T;
+      };
+  layout?:
+    | T
+    | {
+        layout1?: T | Layout1BlockSelect<T>;
+        layout19?: T | Layout19BlockSelect<T>;
+        layout207?:
+          | T
+          | {
+              tagline?: T;
+              heading?: T;
+              description?: T;
+              features?:
+                | T
+                | {
+                    icon?: T;
+                    paragraph?: T;
+                    id?: T;
+                  };
+              buttons?:
+                | T
+                | {
+                    label?: T;
+                    link?:
+                      | T
+                      | {
+                          type?: T;
+                          newTab?: T;
+                          reference?: T;
+                          url?: T;
+                          label?: T;
+                          appearance?: T;
+                        };
+                    id?: T;
+                  };
+              image?: T;
+              id?: T;
+              blockName?: T;
+            };
+        layout484?:
+          | T
+          | {
+              tagline?: T;
+              heading?: T;
+              buttons?:
+                | T
+                | {
+                    label?: T;
+                    link?:
+                      | T
+                      | {
+                          type?: T;
+                          newTab?: T;
+                          reference?: T;
+                          url?: T;
+                          label?: T;
+                          appearance?: T;
+                        };
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        cta25?:
+          | T
+          | {
+              heading?: T;
+              description?: T;
+              buttons?:
+                | T
+                | {
+                    label?: T;
+                    link?:
+                      | T
+                      | {
+                          type?: T;
+                          newTab?: T;
+                          reference?: T;
+                          url?: T;
+                          label?: T;
+                          appearance?: T;
+                        };
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        image?: T;
+        description?: T;
+      };
+  publishedAt?: T;
+  slug?: T;
+  slugLock?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout19Block_select".
+ */
+export interface Layout19BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  features?:
+    | T
+    | {
+        paragraph?: T;
+        id?: T;
+      };
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  media?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-categories_select".
+ */
+export interface ServiceCategoriesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  slug?: T;
+  slugLock?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

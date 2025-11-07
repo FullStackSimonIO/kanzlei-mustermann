@@ -1,187 +1,152 @@
-# Aufgabe: Relume Komponente "Layout416" in PayloadCMS Block umwandeln
+# Aufgabe: Relume Komponente "Portfolio16" in PayloadCMS Block umwandeln
 
 ## Kontext
 Du bist ein Experte für PayloadCMS und React. Deine Aufgabe ist es, die folgende Relume-Komponente in einen vollständigen PayloadCMS Block umzuwandeln.
 
-## Relume Komponente: Layout416
+## Relume Komponente: Portfolio16
 
 ```tsx
-"use client";
-
-import { useRef } from "react";
-import { Button, useMediaQuery } from "@relume_io/relume-ui";
+import { Button } from "@relume_io/relume-ui";
 import type { ButtonProps } from "@relume_io/relume-ui";
 import { RxChevronRight } from "react-icons/rx";
-import { MotionStyle, MotionValue, motion, useScroll, useTransform } from "framer-motion";
 
 type ImageProps = {
   src: string;
   alt?: string;
 };
 
-type FeatureSectionProps = {
-  icon: ImageProps;
+type Tag = {
+  label: string;
+  url: string;
+};
+
+type ProjectProps = {
   title: string;
   description: string;
+  image: ImageProps;
+  url: string;
+  button: ButtonProps;
+  tags: Tag[];
 };
 
 type Props = {
   tagline: string;
   heading: string;
   description: string;
-  buttons: ButtonProps[];
-  featureSections: FeatureSectionProps[];
+  projects: ProjectProps[];
+  button: ButtonProps;
 };
 
-export type Layout416Props = React.ComponentPropsWithoutRef<"section"> & Partial<Props>;
+export type Portfolio16Props = React.ComponentPropsWithoutRef<"section"> &
+  Partial<Props>;
 
-export const Layout416 = (props: Layout416Props) => {
-  const { tagline, heading, description, buttons, featureSections } = {
-    ...Layout416Defaults,
+export const Portfolio16 = (props: Portfolio16Props) => {
+  const { tagline, heading, description, projects, button } = {
+    ...Portfolio16Defaults,
     ...props,
   };
-
-  const isMobile = useMediaQuery("(max-width: 767px)");
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: isMobile ? ["20% start", "end end"] : ["start start", "end end"],
-  });
-
   return (
-    <section id="relume" ref={containerRef} className="px-[5%]">
+    <section id="relume" className="px-[5%] py-16 md:py-24 lg:py-28">
       <div className="container">
-        <div className="relative h-[300svh] lg:h-[300vh]">
-          <div className="static grid h-full grid-cols-1 content-start items-center gap-x-20 gap-y-16 py-16 md:sticky md:top-0 md:h-[100svh] md:grid-cols-2 md:content-normal md:py-0 lg:h-screen">
-            <div>
-              <p className="mb-3 font-semibold md:mb-4">{tagline}</p>
-              <h2 className="rb-5 mb-5 text-5xl font-bold md:mb-6 md:text-7xl lg:text-8xl">
-                {heading}
-              </h2>
-              <p className="md:text-md">{description}</p>
-              <div className="mt-6 flex items-center gap-x-4 md:mt-8">
-                {buttons.map((button, index) => (
-                  <Button key={index} {...button}>
-                    {button.title}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="sticky top-[25%] flex min-h-[24.5rem] flex-col items-center justify-center md:relative md:top-0 md:min-h-[auto]">
-              {featureSections.map((section, index) => (
-                <FeatureSection
-                  key={index}
-                  section={section}
-                  index={index}
-                  totalSections={featureSections.length}
-                  scrollYProgress={scrollYProgress}
-                />
-              ))}
-            </div>
-          </div>
+        <header className="mb-12 max-w-lg md:mb-18 lg:mb-20">
+          <p className="mb-3 font-semibold md:mb-4">{tagline}</p>
+          <h2 className="mb-5 text-5xl font-bold md:mb-6 md:text-7xl lg:text-8xl">
+            {heading}
+          </h2>
+          <p className="md:text-md">{description}</p>
+        </header>
+        <div>
+          {projects.map((project, index) => (
+            <Project key={index} {...project} />
+          ))}
         </div>
+        <footer className="mt-12 flex justify-center md:mt-18 lg:mt-20">
+          <Button {...button}>{button.title}</Button>
+        </footer>
       </div>
-      <div className="absolute inset-0 -z-10 mt-[100vh]" />
     </section>
   );
 };
 
-const FeatureSection = ({
-  section,
-  index,
-  totalSections,
-  scrollYProgress,
-}: {
-  section: FeatureSectionProps;
-  index: number;
-  totalSections: number;
-  scrollYProgress: MotionValue<number>;
-}) => {
-  const sectionScrollStart = index / totalSections;
-  const sectionScrollEnd = (index + 1) / totalSections;
+const Project: React.FC<ProjectProps> = ({
+  title,
+  description,
+  image,
+  url,
+  button,
+  tags,
+}) => (
+  <article className="grid grid-cols-1 items-center gap-x-12 gap-y-6 border-t border-border-primary py-8 md:grid-cols-2 md:gap-y-0 lg:gap-x-[5rem] lg:py-12">
+    <div>
+      <a href={url} className="flex aspect-[4/3] w-full">
+        <img src={image.src} className="w-full object-cover" alt={image.alt} />
+      </a>
+    </div>
+    <div>
+      <h3 className="mb-2 text-2xl font-bold md:text-3xl md:leading-[1.3] lg:text-4xl">
+        <a href={url}>{title}</a>
+      </h3>
+      <p>{description}</p>
+      <ul className="mt-3 flex flex-wrap gap-2 md:mt-4">
+        {tags.map((tag, index) => (
+          <li key={index} className="flex">
+            <a
+              href={tag.url}
+              className="bg-background-secondary px-2 py-1 text-sm font-semibold"
+            >
+              {tag.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <Button {...button} asChild className="mt-6 md:mt-8">
+        <a href={url}>{button.title}</a>
+      </Button>
+    </div>
+  </article>
+);
 
-  const rotate = useTransform(
-    scrollYProgress,
-    [sectionScrollStart, sectionScrollEnd],
-    [0 + index * 3, -30],
-  );
-  const translateY = useTransform(
-    scrollYProgress,
-    [sectionScrollStart, sectionScrollEnd],
-    ["0vh", "-100vh"],
-  );
-
-  const translateX = useTransform(
-    scrollYProgress,
-    [sectionScrollStart, sectionScrollEnd],
-    ["0vw", "-10vw"],
-  );
-
-  return (
-    <motion.div
-      className="absolute mx-6 flex flex-col justify-between border border-border-primary bg-background-primary p-8 md:ml-0"
-      style={
-        {
-          rotate: index === totalSections - 1 ? "6deg" : rotate,
-          translateY: index === totalSections - 1 ? undefined : translateY,
-          translateX: index === totalSections - 1 ? undefined : translateX,
-          zIndex: totalSections - index,
-        } as MotionStyle
-      }
-    >
-      <div className="rb-6 mb-6 md:mb-8">
-        <img src={section.icon.src} alt={section.icon.alt} className="size-12" />
-      </div>
-      <h3 className="mb-3 text-xl font-bold md:mb-4 md:text-2xl">{section.title}</h3>
-      <p>{section.description}</p>
-    </motion.div>
-  );
+const project = {
+  title: "Project name here",
+  description:
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros.",
+  image: {
+    src: "https://d22po4pjz3o32e.cloudfront.net/placeholder-image-landscape.svg",
+    alt: "Relume placeholder image",
+  },
+  url: "#",
+  button: {
+    title: "View project",
+    variant: "link",
+    size: "link",
+    iconRight: <RxChevronRight />,
+  },
+  tags: [
+    {
+      label: "Tag one",
+      url: "#",
+    },
+    {
+      label: "Tag two",
+      url: "#",
+    },
+    {
+      label: "Tag three",
+      url: "#",
+    },
+  ],
 };
 
-export const Layout416Defaults: Props = {
-  tagline: "Tagline",
-  heading: "Medium length section heading goes here",
-  description:
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.",
-  buttons: [
-    { title: "Button", variant: "secondary" },
-    {
-      title: "Button",
-      variant: "link",
-      size: "link",
-      iconRight: <RxChevronRight />,
-    },
-  ],
-  featureSections: [
-    {
-      icon: {
-        src: "https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg",
-        alt: "Relume logo 1",
-      },
-      title: "Subheading one",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.",
-    },
-    {
-      icon: {
-        src: "https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg",
-        alt: "Relume logo 2",
-      },
-      title: "Subheading two",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.",
-    },
-    {
-      icon: {
-        src: "https://d22po4pjz3o32e.cloudfront.net/relume-icon.svg",
-        alt: "Relume logo 3",
-      },
-      title: "Subheading three",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse varius enim in eros elementum tristique. Duis cursus, mi quis viverra ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.",
-    },
-  ],
+export const Portfolio16Defaults: Props = {
+  tagline: "Portfolio",
+  heading: "Short heading goes here",
+  description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+  projects: [project, project, project],
+  button: {
+    title: "View all",
+    variant: "secondary",
+    size: "primary",
+  },
 };
 
 ```
@@ -189,8 +154,8 @@ export const Layout416Defaults: Props = {
 ## Anforderungen
 
 ### 1. Erstelle config.ts
-- Block Slug: `layout416`
-- Interface Name: `Layout416Block`
+- Block Slug: `portfolio16`
+- Interface Name: `Portfolio16Block`
 - **WICHTIG: KEINE Farboptionen (backgroundColor, etc.)**
 - Deutsche Labels und Beschreibungen
 - Verwende für Fließtexte: RichText mit vollem Lexical Editor (siehe Beispiel)
@@ -200,7 +165,7 @@ export const Layout416Defaults: Props = {
 
 ### 2. Erstelle Component.tsx
 - **WICHTIG: KEIN 'use client' in Component.tsx - Server Component!**
-- Type-safe mit: `Extract<Page['layout'][0], { blockType: 'layout416' }>`
+- Type-safe mit: `Extract<Page['layout'][0], { blockType: 'portfolio16' }>`
 - Nutze: RichText, Media, CMSLink Komponenten
 - Responsive Grid Layout
 - Spacing Classes wie im Beispiel
