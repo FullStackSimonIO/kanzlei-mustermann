@@ -10,6 +10,9 @@ import { CTA39Block } from '@/blocks/CTA/CTA39/Component'
 import { FAQ2Block } from '@/blocks/FAQ/FAQ2/Component'
 import { Gallery18Block } from '@/blocks/Gallery/Gallery18/Component'
 import { Team12Block } from '@/blocks/Team/Team12/Component'
+import { Contact16Block } from '@/blocks/Contact16/Component'
+import { Contact6Block } from '@/blocks/Contact6/Component'
+import { FAQ5Block } from '@/blocks/FAQ5/Component'
 /* PLOP_IMPORTS */
 
 import React, { Fragment } from 'react'
@@ -28,6 +31,9 @@ const blockComponents = {
   faq2: FAQ2Block,
   gallery18: Gallery18Block,
   team12: Team12Block,
+  contact16: Contact16Block,
+  contact6: Contact6Block,
+  faq5: FAQ5Block,
 
   /* PLOP_EXPORTS */
 } // ! Block Komponenten hier importieren

@@ -27,6 +27,9 @@ import { Layout520 } from '@/blocks/Layout/Layout520/config'
 import { Team12 } from '@/blocks/Team/Team12/config'
 import { Layout239 } from '@/blocks/Layout/Layout239/config'
 import { Layout506 } from '@/blocks/Layout/Layout506/config'
+import { Contact16 } from '@/blocks/Contact16/config'
+import { Contact6 } from '@/blocks/Contact6/config'
+import { FAQ5 } from '@/blocks/FAQ5/config'
 /* PLOP_IMPORT_BLOCK_CONFIG */
 
 export const Pages: CollectionConfig<'pages'> = {
@@ -100,6 +103,9 @@ export const Pages: CollectionConfig<'pages'> = {
                 Gallery18,
                 Team12,
                 Layout506,
+                Contact16,
+                Contact6,
+                FAQ5,
 
                 /* PLOP_BLOCKS */
               ], // ! HIER DIE CONFIG DES BLOCKS IMPORTIEREN
