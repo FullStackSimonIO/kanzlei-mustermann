@@ -1,120 +1,103 @@
-import type { Field } from 'payload'
-
+import type { Block } from 'payload'
 import {
-  FixedToolbarFeature,
-  HeadingFeature,
-  InlineToolbarFeature,
-  lexicalEditor,
   BoldFeature,
   ItalicFeature,
-  UnderlineFeature,
-  StrikethroughFeature,
-  ParagraphFeature,
   LinkFeature,
+  ParagraphFeature,
+  lexicalEditor,
+  UnderlineFeature,
+  HeadingFeature,
+  BlockquoteFeature,
   OrderedListFeature,
   UnorderedListFeature,
-  BlockquoteFeature,
-  AlignFeature,
+  ChecklistFeature,
   IndentFeature,
+  AlignFeature,
   HorizontalRuleFeature,
+  FixedToolbarFeature,
+  InlineToolbarFeature,
+  StrikethroughFeature,
   SubscriptFeature,
   SuperscriptFeature,
-  ChecklistFeature,
   BlocksFeature,
 } from '@payloadcms/richtext-lexical'
-
 import {
+  BgColorFeature,
   TextColorFeature,
   HighlightColorFeature,
-  BgColorFeature,
   YoutubeFeature,
   VimeoFeature,
 } from 'payloadcms-lexical-ext'
-
 import type { TextFieldSingleValidation } from 'payload'
 import type { LinkFields } from '@payloadcms/richtext-lexical'
-
 import { linkGroup } from '@/fields/linkGroup'
-import { PostHero } from './PostHero'
 
-export const hero: Field = {
-  name: 'hero',
-  type: 'group',
+export const Layout416: Block = {
+  slug: 'layout416',
+  interfaceName: 'Layout416Block',
+  labels: {
+    singular: 'Layout 416 - Scroll-animierte Feature Sections',
+    plural: 'Layout 416 - Scroll-animierte Feature Sections',
+  },
   fields: [
+    // * Unterüberschrift / Tagline
     {
-      name: 'type',
-      type: 'select',
-      defaultValue: 'none',
-      label: 'Hero Auswahl',
-      options: [
-        {
-          label: 'None',
-          value: 'none',
-        },
-        {
-          label: 'Post Hero',
-          value: 'postHero',
-        },
-        {
-          label: 'Hero Header 1',
-          value: 'heroheader1',
-        },
-        {
-          label: 'Hero Header 9',
-          value: 'heroheader9',
-        },
-        {
-          label: 'Hero Header 62',
-          value: 'heroheader62',
-        },
-        {
-          label: 'Hero Header 102',
-          value: 'heroheader102',
-        },
-        /* PLOP_HERO_TYPE_OPTIONS */
-      ],
-      required: true,
+      name: 'tagline',
+      type: 'text',
+      label: 'Unterüberschrift / Tagline',
+      admin: {
+        description: 'Optionale Unterüberschrift oder Tagline über der Hauptüberschrift',
+      },
     },
-    // * Basis-Felder (für alle Heroes)
+    // * Überschrift
     {
-      name: 'title',
+      name: 'heading',
       type: 'text',
       label: 'Überschrift',
       admin: {
-        description: 'Die Hauptüberschrift des Hero-Bereichs',
+        description: 'Die Hauptüberschrift für diesen Abschnitt',
       },
       required: true,
     },
+    // * Fließtext mit allen möglichen Optionen
     {
       name: 'richText',
       type: 'richText',
       label: 'Fließtext',
       admin: {
-        description: 'Beschreibungstext unter der Überschrift',
+        description:
+          'Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.',
       },
       editor: lexicalEditor({
         features: ({ rootFeatures }) => {
           return [
             ...rootFeatures,
+            // Basis Text Features
             ParagraphFeature(),
-            HeadingFeature({ enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] }),
+            HeadingFeature({
+              enabledHeadingSizes: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+            }),
             BoldFeature(),
             ItalicFeature(),
             UnderlineFeature(),
             StrikethroughFeature(),
             SubscriptFeature(),
             SuperscriptFeature(),
+            // Listen und Strukturierung
             OrderedListFeature(),
             UnorderedListFeature(),
             ChecklistFeature(),
             BlockquoteFeature(),
+            // Formatierung und Layout
             IndentFeature(),
             AlignFeature(),
             HorizontalRuleFeature(),
+            // Farben und Styling
             TextColorFeature(),
             HighlightColorFeature(),
             BlocksFeature({}),
             BgColorFeature(),
+            // Links
             LinkFeature({
               enabledCollections: ['pages', 'posts'],
               fields: ({ defaultFields }) => {
@@ -143,96 +126,96 @@ export const hero: Field = {
                 ]
               },
             }),
+            // Video Einbettung
             YoutubeFeature(),
             VimeoFeature(),
+            // Toolbars für bessere Bedienbarkeit
             FixedToolbarFeature(),
             InlineToolbarFeature(),
           ]
         },
       }),
+      required: true,
     },
+    // * Link Gruppe für Call-to-Action Buttons
     linkGroup({
       overrides: {
         label: 'Call-to-Action Buttons',
+        admin: {
+          description:
+            'Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden',
+        },
         maxRows: 2,
       },
     }),
-    // * PostHero Conditional Fields
+    // * Feature Sections Array
     {
-      name: 'media',
-      label: 'Hero Section Medien',
+      name: 'featureSections',
       type: 'array',
+      label: 'Feature Sections',
       admin: {
-        condition: (_, { type } = {}) => type === 'postHero',
+        description: 'Fügen Sie Feature Sections mit Icon, Titel und Beschreibung hinzu',
       },
+      minRows: 1,
       fields: [
         {
-          name: 'image',
+          name: 'icon',
           type: 'upload',
           relationTo: 'media',
+          label: 'Icon',
+          admin: {
+            description:
+              'Quadratisches Icon für die Feature Section. Empfohlen: 64x64px oder größer',
+          },
+          required: true,
+        },
+        {
+          name: 'title',
+          type: 'text',
+          label: 'Titel',
+          admin: {
+            description: 'Titel der Feature Section',
+          },
+          required: true,
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          label: 'Beschreibung',
+          admin: {
+            description: 'Beschreibung der Feature Section',
+          },
           required: true,
         },
       ],
     },
-    // * HeroHeader1 & HeroHeader9 Conditional Fields
+    // * Abstand oben/unten
     {
-      name: 'image',
-      type: 'upload',
-      relationTo: 'media',
-      label: 'Hero Bild',
-      required: true,
+      name: 'spacing',
+      type: 'select',
+      label: 'Abstände',
+      defaultValue: 'medium',
       admin: {
-        description: 'Das Hauptbild für den Hero-Bereich',
-        condition: (_, { type } = {}) => type === 'heroheader1' || type === 'heroheader9',
+        description: 'Wählen Sie den Abstand über und unter diesem Abschnitt',
       },
-    },
-    // * HeroHeader62 Conditional Fields
-    {
-      name: 'tagline',
-      type: 'text',
-      label: 'Unterüberschrift / Tagline',
-      admin: {
-        description: 'Kurze Unterüberschrift über der Hauptüberschrift',
-        condition: (_, { type } = {}) => type === 'heroheader62',
-      },
-    },
-    // * HeroHeader102 Conditional Fields
-    {
-      name: 'carouselImages',
-      type: 'array',
-      label: 'Carousel Bilder',
-      admin: {
-        description: 'Bilder für das Carousel',
-        condition: (_, { type } = {}) => type === 'heroheader102',
-      },
-      fields: [
+      options: [
         {
-          name: 'image',
-          type: 'upload',
-          relationTo: 'media',
-          required: true,
+          label: 'Klein',
+          value: 'small',
+        },
+        {
+          label: 'Mittel (Standard)',
+          value: 'medium',
+        },
+        {
+          label: 'Groß',
+          value: 'large',
+        },
+        {
+          label: 'Kein Abstand',
+          value: 'none',
         },
       ],
     },
-    {
-      name: 'carouselTitle',
-      type: 'text',
-      label: 'Carousel Überschrift',
-      admin: {
-        description: 'Überschrift für jeden Carousel-Slide',
-        condition: (_, { type } = {}) => type === 'heroheader102',
-      },
-    },
-    {
-      name: 'carouselDescription',
-      type: 'textarea',
-      label: 'Carousel Beschreibung',
-      admin: {
-        description: 'Beschreibung für jeden Carousel-Slide',
-        condition: (_, { type } = {}) => type === 'heroheader102',
-      },
-    },
-    /* PLOP_HERO_FIELDS */
   ],
-  label: 'Hero Section',
 }

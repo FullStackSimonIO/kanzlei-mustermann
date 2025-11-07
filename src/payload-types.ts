@@ -146,7 +146,7 @@ export interface Page {
   id: number;
   title: string;
   hero: {
-    type: 'none' | 'postHero' | 'heroheader1';
+    type: 'none' | 'postHero' | 'heroheader1' | 'heroheader9' | 'heroheader62' | 'heroheader102';
     /**
      * Die Hauptüberschrift des Hero-Bereichs
      */
@@ -203,8 +203,40 @@ export interface Page {
      * Das Hauptbild für den Hero-Bereich
      */
     image?: (number | null) | Media;
+    /**
+     * Kurze Unterüberschrift über der Hauptüberschrift
+     */
+    tagline?: string | null;
+    /**
+     * Bilder für das Carousel
+     */
+    carouselImages?:
+      | {
+          image: number | Media;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Überschrift für jeden Carousel-Slide
+     */
+    carouselTitle?: string | null;
+    /**
+     * Beschreibung für jeden Carousel-Slide
+     */
+    carouselDescription?: string | null;
   };
-  layout: Layout1Block[];
+  layout: (
+    | Layout1Block
+    | Layout16Block
+    | Layout416Block
+    | Layout91Block
+    | Layout520Block
+    | Cta1Block
+    | CTA39Block
+    | Faq2Block
+    | Gallery18Block
+    | Team12Block
+  )[];
   meta?: {
     title?: string | null;
     /**
@@ -471,6 +503,746 @@ export interface Layout1Block {
   id?: string | null;
   blockName?: string | null;
   blockType: 'layout1';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout16Block".
+ */
+export interface Layout16Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie Features mit Icon und Beschreibung hinzu
+   */
+  features?:
+    | {
+        /**
+         * Quadratisches Icon für das Feature. Empfohlen: 64x64px oder größer
+         */
+        icon: number | Media;
+        /**
+         * Kurze Beschreibung des Features
+         */
+        paragraph: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter den Features angezeigt werden
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Das Bild, das auf der rechten Seite neben dem Text angezeigt wird. Empfohlen: Querformat, mindestens 800x600px
+   */
+  media: number | Media;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout16';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout416Block".
+ */
+export interface Layout416Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Fügen Sie Feature Sections mit Icon, Titel und Beschreibung hinzu
+   */
+  featureSections?:
+    | {
+        /**
+         * Quadratisches Icon für die Feature Section. Empfohlen: 64x64px oder größer
+         */
+        icon: number | Media;
+        /**
+         * Titel der Feature Section
+         */
+        title: string;
+        /**
+         * Beschreibung der Feature Section
+         */
+        description: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout416';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout91Block".
+ */
+export interface Layout91Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden (z.B. "Mehr erfahren", "Kontakt")
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * URL zum Video (z.B. YouTube oder Vimeo Embed URL)
+   */
+  videoUrl: string;
+  /**
+   * Das Vorschaubild für das Video. Empfohlen: Querformat, mindestens 800x600px
+   */
+  media: number | Media;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout91';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout520Block".
+ */
+export interface Layout520Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Karten mit Logo, Hintergrund-Bild und Link
+   */
+  cards?:
+    | {
+        /**
+         * Logo für die Karte. Empfohlen: Quadratisch, 120x120px oder größer
+         */
+        logo: number | Media;
+        /**
+         * Hintergrund-Bild für die Karte. Empfohlen: Quadratisch, mindestens 400x400px
+         */
+        image: number | Media;
+        /**
+         * Überschrift der Karte
+         */
+        cardHeading: string;
+        /**
+         * Kurze Beschreibung der Karte
+         */
+        cardDescription: string;
+        /**
+         * Link/Button für die Karte
+         */
+        links?:
+          | {
+              link: {
+                type?: ('reference' | 'custom') | null;
+                newTab?: boolean | null;
+                reference?:
+                  | ({
+                      relationTo: 'pages';
+                      value: number | Page;
+                    } | null)
+                  | ({
+                      relationTo: 'posts';
+                      value: number | Post;
+                    } | null);
+                url?: string | null;
+                label: string;
+                /**
+                 * Choose how the link should be rendered.
+                 */
+                appearance?: ('default' | 'outline') | null;
+              };
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'layout520';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Cta1Block".
+ */
+export interface Cta1Block {
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die unter dem Text angezeigt werden (z.B. "Mehr erfahren", "Kontakt")
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Das Bild, das auf der rechten Seite neben dem Text angezeigt wird. Empfohlen: Querformat, mindestens 800x600px
+   */
+  media: number | Media;
+  /**
+   * Wählen Sie, ob das Bild rechts oder links vom Text angezeigt werden soll
+   */
+  imagePosition?: ('right' | 'left') | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'cta1';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CTA39Block".
+ */
+export interface CTA39Block {
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Beschreibungstext. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  description: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie bis zu 2 Buttons/Links hinzu, die neben der Überschrift angezeigt werden (z.B. "Jetzt starten", "Kontakt")
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Das Bild, das neben dem Text angezeigt wird. Empfohlen: Quadratisch oder Hochformat, mindestens 600x600px
+   */
+  image: number | Media;
+  /**
+   * Wählen Sie, ob das Bild rechts oder links vom Text angezeigt werden soll
+   */
+  imagePosition?: ('right' | 'left') | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'cta39';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Faq2Block".
+ */
+export interface Faq2Block {
+  /**
+   * Die Hauptüberschrift für den FAQ Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Beschreibungstext unter der Überschrift
+   */
+  description: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie Fragen und Antworten hinzu
+   */
+  questions: {
+    title: string;
+    answer: {
+      root: {
+        type: string;
+        children: {
+          type: string;
+          version: number;
+          [k: string]: unknown;
+        }[];
+        direction: ('ltr' | 'rtl') | null;
+        format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+        indent: number;
+        version: number;
+      };
+      [k: string]: unknown;
+    };
+    id?: string | null;
+  }[];
+  /**
+   * Überschrift für den Footer Bereich
+   */
+  footerHeading: string;
+  /**
+   * Beschreibungstext für den Footer Bereich
+   */
+  footerDescription: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Button im Footer Bereich (z.B. "Kontakt")
+   */
+  links?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'faq2';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Gallery18Block".
+ */
+export interface Gallery18Block {
+  /**
+   * Die Hauptüberschrift für die Galerie
+   */
+  heading: string;
+  /**
+   * Die Beschreibung der Galerie. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Bilder für das Carousel
+   */
+  images?:
+    | {
+        /**
+         * Quadratisches Bild für das Carousel. Empfohlen: 400x400px oder größer
+         */
+        image: number | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'gallery18';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Team12Block".
+ */
+export interface Team12Block {
+  /**
+   * Optionale Unterüberschrift oder Tagline über der Hauptüberschrift
+   */
+  tagline?: string | null;
+  /**
+   * Die Hauptüberschrift für diesen Abschnitt
+   */
+  heading: string;
+  /**
+   * Der Hauptinhalt des Textbereichs. Hier können Sie formatieren, Links einfügen, Listen erstellen und vieles mehr.
+   */
+  richText: {
+    root: {
+      type: string;
+      children: {
+        type: string;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Fügen Sie Team Members mit Foto, Name, Titel und Beschreibung hinzu
+   */
+  teamMembers?:
+    | {
+        /**
+         * Team Member Photo. Empfohlen: 3:2 Verhältnis, mindestens 600x400px
+         */
+        image: number | Media;
+        /**
+         * Vollständiger Name des Team Members
+         */
+        name: string;
+        /**
+         * Berufsbezeichnung oder Position
+         */
+        jobTitle: string;
+        /**
+         * Kurze Beschreibung des Team Members
+         */
+        description: string;
+        /**
+         * Social Media Links (LinkedIn, Twitter, etc.)
+         */
+        socialLinks?:
+          | {
+              platform: 'linkedin' | 'twitter' | 'github' | 'dribbble' | 'website';
+              /**
+               * Link zur Social Media Profile oder Website
+               */
+              url: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Überschrift für die Footer Call-to-Action Section
+   */
+  footerHeading?: string | null;
+  /**
+   * Beschreibung für die Footer CTA Section
+   */
+  footerDescription?: string | null;
+  /**
+   * Button für die Footer Section (z.B. "Open Positions")
+   */
+  footerLinks?:
+    | {
+        link: {
+          type?: ('reference' | 'custom') | null;
+          newTab?: boolean | null;
+          reference?:
+            | ({
+                relationTo: 'pages';
+                value: number | Page;
+              } | null)
+            | ({
+                relationTo: 'posts';
+                value: number | Post;
+              } | null);
+          url?: string | null;
+          label: string;
+          /**
+           * Choose how the link should be rendered.
+           */
+          appearance?: ('default' | 'outline') | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Wählen Sie den Abstand über und unter diesem Abschnitt
+   */
+  spacing?: ('small' | 'medium' | 'large' | 'none') | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'team12';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -752,11 +1524,29 @@ export interface PagesSelect<T extends boolean = true> {
               id?: T;
             };
         image?: T;
+        tagline?: T;
+        carouselImages?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+        carouselTitle?: T;
+        carouselDescription?: T;
       };
   layout?:
     | T
     | {
         layout1?: T | Layout1BlockSelect<T>;
+        layout16?: T | Layout16BlockSelect<T>;
+        layout416?: T | Layout416BlockSelect<T>;
+        layout91?: T | Layout91BlockSelect<T>;
+        layout520?: T | Layout520BlockSelect<T>;
+        cta1?: T | Cta1BlockSelect<T>;
+        cta39?: T | CTA39BlockSelect<T>;
+        faq2?: T | Faq2BlockSelect<T>;
+        gallery18?: T | Gallery18BlockSelect<T>;
+        team12?: T | Team12BlockSelect<T>;
       };
   meta?:
     | T
@@ -797,6 +1587,294 @@ export interface Layout1BlockSelect<T extends boolean = true> {
       };
   media?: T;
   imagePosition?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout16Block_select".
+ */
+export interface Layout16BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  features?:
+    | T
+    | {
+        icon?: T;
+        paragraph?: T;
+        id?: T;
+      };
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  media?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout416Block_select".
+ */
+export interface Layout416BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  featureSections?:
+    | T
+    | {
+        icon?: T;
+        title?: T;
+        description?: T;
+        id?: T;
+      };
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout91Block_select".
+ */
+export interface Layout91BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  videoUrl?: T;
+  media?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Layout520Block_select".
+ */
+export interface Layout520BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  cards?:
+    | T
+    | {
+        logo?: T;
+        image?: T;
+        cardHeading?: T;
+        cardDescription?: T;
+        links?:
+          | T
+          | {
+              link?:
+                | T
+                | {
+                    type?: T;
+                    newTab?: T;
+                    reference?: T;
+                    url?: T;
+                    label?: T;
+                    appearance?: T;
+                  };
+              id?: T;
+            };
+        id?: T;
+      };
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Cta1Block_select".
+ */
+export interface Cta1BlockSelect<T extends boolean = true> {
+  heading?: T;
+  richText?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  media?: T;
+  imagePosition?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CTA39Block_select".
+ */
+export interface CTA39BlockSelect<T extends boolean = true> {
+  heading?: T;
+  description?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  image?: T;
+  imagePosition?: T;
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Faq2Block_select".
+ */
+export interface Faq2BlockSelect<T extends boolean = true> {
+  heading?: T;
+  description?: T;
+  questions?:
+    | T
+    | {
+        title?: T;
+        answer?: T;
+        id?: T;
+      };
+  footerHeading?: T;
+  footerDescription?: T;
+  links?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Gallery18Block_select".
+ */
+export interface Gallery18BlockSelect<T extends boolean = true> {
+  heading?: T;
+  richText?: T;
+  images?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
+  spacing?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "Team12Block_select".
+ */
+export interface Team12BlockSelect<T extends boolean = true> {
+  tagline?: T;
+  heading?: T;
+  richText?: T;
+  teamMembers?:
+    | T
+    | {
+        image?: T;
+        name?: T;
+        jobTitle?: T;
+        description?: T;
+        socialLinks?:
+          | T
+          | {
+              platform?: T;
+              url?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  footerHeading?: T;
+  footerDescription?: T;
+  footerLinks?:
+    | T
+    | {
+        link?:
+          | T
+          | {
+              type?: T;
+              newTab?: T;
+              reference?: T;
+              url?: T;
+              label?: T;
+              appearance?: T;
+            };
+        id?: T;
+      };
   spacing?: T;
   id?: T;
   blockName?: T;

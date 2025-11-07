@@ -7,9 +7,6 @@ import { populatePublishedAt } from '../../hooks/populatePublishedAt'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { revalidateDelete, revalidatePage } from './hooks/revalidatePage'
 
-import { Layout1 } from '@/blocks/Layout/Layout1/config'
-/* PLOP_IMPORT_BLOCK_CONFIG */
-
 import {
   MetaDescriptionField,
   MetaImageField,
@@ -17,6 +14,18 @@ import {
   OverviewField,
   PreviewField,
 } from '@payloadcms/plugin-seo/fields'
+
+import { Layout1 } from '@/blocks/Layout/Layout1/config'
+import { Layout16 } from '@/blocks/Layout/Layout16/config'
+import { Layout416 } from '@/blocks/Layout/Layout416/config'
+import { Layout91 } from '@/blocks/Layout/Layout91/config'
+import { CTA1 } from '@/blocks/CTA/CTA1/config'
+import { CTA39 } from '@/blocks/CTA/CTA39/config'
+import { FAQ2 } from '@/blocks/FAQ/FAQ2/config'
+import { Gallery18 } from '@/blocks/Gallery/Gallery18/config'
+import { Layout520 } from '@/blocks/Layout/Layout520/config'
+import { Team12 } from '@/blocks/Team/Team12/config'
+/* PLOP_IMPORT_BLOCK_CONFIG */
 
 export const Pages: CollectionConfig<'pages'> = {
   slug: 'pages',
@@ -78,6 +87,15 @@ export const Pages: CollectionConfig<'pages'> = {
               type: 'blocks',
               blocks: [
                 Layout1,
+                Layout16,
+                Layout416,
+                Layout91,
+                Layout520,
+                CTA1,
+                CTA39,
+                FAQ2,
+                Gallery18,
+                Team12,
 
                 /* PLOP_BLOCKS */
               ], // ! HIER DIE CONFIG DES BLOCKS IMPORTIEREN
